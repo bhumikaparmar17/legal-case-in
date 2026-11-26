@@ -30,8 +30,11 @@ export default function ModulePage() {
   const navigate = useNavigate()
 
   // Module 1: Client Master & Client Information
-  if (slug === 'client-master' || slug === 'client-information') {
-    return <ClientManagement />
+  if (slug === 'client-information') {
+    return <ClientManagement viewMode="information" />
+  }
+  if (slug === 'client-master') {
+    return <ClientManagement viewMode="master" />
   }
 
   // Module 2: Case Master

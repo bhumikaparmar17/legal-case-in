@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Users, UserPlus, Save, RefreshCw, Printer, XCircle, Search,
   Phone, MapPin, Calendar, IndianRupee, ArrowLeft, CheckCircle2,
@@ -16,8 +16,10 @@ import {
 import { api } from '../services/api.js'
 import './management.css'
 
-export default function ClientManagement() {
+export default function ClientManagement({ viewMode }) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const isInfoMode = viewMode === 'information' || location.pathname.includes('client-information')
   const [clients, setClients] = useState(() => getClients())
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
@@ -424,9 +426,9 @@ export default function ClientManagement() {
               <span>Dashboard</span>
             </button>
             <ChevronRight size={12} className="crumbs-sep" />
-            <span className="crumbs-muted">Master Entry</span>
+            <span className="crumbs-muted">{isInfoMode ? 'Case Operations' : 'Master Entry'}</span>
             <ChevronRight size={12} className="crumbs-sep" />
-            <b className="crumbs-active">Client Master (Registration &amp; Records)</b>
+            <b className="crumbs-active">{isInfoMode ? 'Client Information' : 'Client Master (Registration & Records)'}</b>
           </div>
 
           {/* Page Header */}
@@ -437,11 +439,15 @@ export default function ClientManagement() {
               </span>
               <div>
                 <div className="mgmt-tag-row">
-                  <span className="tag-blue">Client Master Module</span>
+                  <span className="tag-blue">{isInfoMode ? 'Client Information Module' : 'Client Master Module'}</span>
                   <span className="tag-muted">{clients.length} Registered Clients</span>
                 </div>
-                <h1 className="mgmt-title">Client Master Management</h1>
-                <p className="mgmt-desc">Register clients, configure legal categories, inspect case histories &amp; print dockets</p>
+                <h1 className="mgmt-title">{isInfoMode ? 'Client Information' : 'Client Master Management'}</h1>
+                <p className="mgmt-desc">
+                  {isInfoMode
+                    ? 'Full client profiles, contact directory, linked case records & financial ledger view'
+                    : 'Register clients, configure legal categories, inspect case histories & print dockets'}
+                </p>
               </div>
             </div>
             <div className="mgmt-header-actions">
@@ -449,10 +455,17 @@ export default function ClientManagement() {
                 <ArrowLeft size={14} />
                 <span>Dashboard</span>
               </button>
-              <button className="btn-primary" onClick={handleClear}>
-                <UserPlus size={14} />
-                <span>New Client Form</span>
-              </button>
+              {isInfoMode ? (
+                <button className="btn-primary" onClick={() => navigate('/clients')}>
+                  <UserPlus size={14} />
+                  <span>Register New Client (Master)</span>
+                </button>
+              ) : (
+                <button className="btn-primary" onClick={handleClear}>
+                  <UserPlus size={14} />
+                  <span>New Client Form</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -502,10 +515,11 @@ export default function ClientManagement() {
             </div>
           )}
 
-          {/* Two-Panel Layout */}
-          <div className="mgmt-two-panel">
-            {/* ================= LEFT PANEL: CLIENT FORM ================= */}
-            <div className="mgmt-form-panel">
+          {/* Layout: Single-panel for Information, Two-panel for Master */}
+          <div className={isInfoMode ? "mgmt-single-panel" : "mgmt-two-panel"}>
+            {/* ================= LEFT PANEL: CLIENT FORM (Only in Client Master) ================= */}
+            {!isInfoMode && (
+              <div className="mgmt-form-panel">
               <div className="panel-card-head">
                 <div className="pch-title">
                   <span className="pch-dot pch-blue" />
@@ -931,13 +945,14 @@ export default function ClientManagement() {
                 </div>
               </form>
             </div>
+            )}
 
             {/* ================= RIGHT PANEL: CLIENT TABLE ================= */}
-            <div className="mgmt-table-panel">
+            <div className="mgmt-table-panel" style={isInfoMode ? { width: '100%' } : {}}>
               <div className="panel-card-head">
                 <div className="pch-title">
                   <span className="pch-dot pch-slate" />
-                  <h3>Registered Clients Directory</h3>
+                  <h3>{isInfoMode ? 'Client Profiles & Directory' : 'Registered Clients Directory'}</h3>
                 </div>
                 <span className="panel-count">{filteredClients.length} of {clients.length} Records</span>
               </div>
@@ -967,18 +982,21 @@ export default function ClientManagement() {
                 <table className="mgmt-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '80px' }}>CLIENT ID</th>
-                      <th>CLIENT NAME</th>
-                      <th>CATEGORY &amp; ROLE</th>
-                      <th style={{ width: '105px' }}>PHONE</th>
-                      <th style={{ width: '85px' }}>FEES (₹)</th>
-                      <th style={{ width: '85px' }}>ACTIONS</th>
+                      <th style={{ width: isInfoMode ? '75px' : '65px', minWidth: isInfoMode ? '75px' : '65px', padding: '6px 8px' }}>CLIENT ID</th>
+                      <th style={{ minWidth: isInfoMode ? '160px' : '140px', maxWidth: isInfoMode ? '220px' : '180px', padding: '6px 8px' }}>CLIENT NAME</th>
+                      {isInfoMode && (
+                        <th style={{ minWidth: '160px', padding: '6px 8px' }}>RESIDENTIAL ADDRESS</th>
+                      )}
+                      <th style={{ width: '105px', minWidth: '105px', padding: '6px 8px' }}>CATEGORY &amp; ROLE</th>
+                      <th style={{ width: isInfoMode ? '140px' : '120px', minWidth: isInfoMode ? '140px' : '120px', maxWidth: isInfoMode ? '160px' : '130px', padding: '6px 8px' }}>PHONE</th>
+                      <th style={{ width: isInfoMode ? '85px' : '75px', minWidth: isInfoMode ? '85px' : '75px', textAlign: 'right', padding: '6px 8px' }}>FEES (₹)</th>
+                      <th style={{ width: isInfoMode ? '85px' : '65px', minWidth: isInfoMode ? '85px' : '65px', textAlign: 'center', padding: '6px 8px' }}>ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredClients.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="empty-table-cell">
+                        <td colSpan={isInfoMode ? 7 : 6} className="empty-table-cell">
                           <AlertCircle size={18} className="empty-ic" />
                           <span>No client records match your search query.</span>
                         </td>
@@ -990,63 +1008,92 @@ export default function ClientManagement() {
                           <tr
                             key={client.id}
                             className={`table-row-clickable ${isSelected ? 'row-selected' : ''}`}
-                            onClick={() => handleSelectClient(client)}
-                            title="Click to load client into form"
+                            onClick={() => (isInfoMode ? handleOpenHistory(client) : handleSelectClient(client))}
+                            title={isInfoMode ? "Click to view full client history & ledger" : "Click to load client into form"}
                           >
-                            <td>
+                            <td style={{ width: isInfoMode ? '75px' : '65px', minWidth: isInfoMode ? '75px' : '65px', whiteSpace: 'nowrap' }}>
                               <span className="id-pill client-id">{client.id}</span>
                             </td>
-                            <td>
-                              <div className="client-name-cell">
-                                <strong className="primary-text">{client.name}</strong>
-                                <small className="muted-subtext">{client.relation || client.address || '—'}</small>
+                            <td style={{ minWidth: isInfoMode ? '160px' : '140px', maxWidth: isInfoMode ? '220px' : '180px', overflow: 'hidden' }}>
+                              <div className="client-name-cell" title={`${client.name} ${client.relation ? `(${client.relation})` : ''}`}>
+                                <strong className="primary-text" style={{ fontSize: '11.5px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {client.name}
+                                </strong>
+                                <small className="muted-subtext" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {client.relation || (!isInfoMode ? client.address : '') || '—'}
+                                </small>
                               </div>
                             </td>
-                            <td>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af' }}>{client.clientCategory || 'Civil'}</span>
-                                <span style={{ fontSize: '10px', color: '#64748b' }}>{client.casePosition || 'Litigant'}</span>
+                            {isInfoMode && (
+                              <td style={{ minWidth: '160px', maxWidth: '240px', overflow: 'hidden' }}>
+                                <div style={{ fontSize: '11px', color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={client.address || '—'}>
+                                  {client.address || '—'}
+                                </div>
+                              </td>
+                            )}
+                            <td style={{ width: '105px', minWidth: '105px', maxWidth: '115px', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.15', maxWidth: '100%', overflow: 'hidden' }}>
+                                <span
+                                  style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                  title={client.clientCategory || 'Civil'}
+                                >
+                                  {client.clientCategory || 'Civil'}
+                                </span>
+                                <span
+                                  style={{ fontSize: '9.5px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                  title={client.casePosition || 'Litigant'}
+                                >
+                                  {client.casePosition || 'Litigant'}
+                                </span>
                               </div>
                             </td>
-                            <td>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span className="cell-phone">{client.phone}</span>
-                                {Array.isArray(client.otherPhones) && client.otherPhones.filter((op) => op && op.phone).length > 0 ? (
-                                  client.otherPhones.filter((op) => op && op.phone).map((op, idx) => (
-                                    <small key={idx} style={{ fontSize: '10px', color: '#64748b', lineHeight: '1.2' }}>
-                                      {op.name ? `${op.name}: ` : 'Other: '}{op.phone}
-                                    </small>
-                                  ))
-                                ) : client.extraPhone ? (
-                                  <small style={{ fontSize: '10px', color: '#64748b' }}>Other: {client.extraPhone}</small>
+                            <td style={{ width: isInfoMode ? '140px' : '120px', minWidth: isInfoMode ? '140px' : '120px', maxWidth: isInfoMode ? '160px' : '130px', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.15', maxWidth: '100%', overflow: 'hidden' }}>
+                                <span
+                                  className="cell-phone"
+                                  style={{ fontSize: '11px', fontWeight: '600', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                  title={client.phone}
+                                >
+                                  {client.phone || '—'}
+                                </span>
+                                {client.extraPhone ? (
+                                  <small
+                                    style={{ fontSize: '9.5px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}
+                                    title={`Other: ${client.extraPhone}`}
+                                  >
+                                    Alt: {client.extraPhone}
+                                  </small>
                                 ) : null}
                               </div>
                             </td>
-                            <td>
-                              <span className="cell-fees">
+                            <td style={{ width: isInfoMode ? '85px' : '75px', minWidth: isInfoMode ? '85px' : '75px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <span className="cell-fees" style={{ fontSize: '11px', fontWeight: '700' }}>
                                 {client.fees ? `₹${Number(client.fees).toLocaleString('en-IN')}` : '—'}
                               </span>
                             </td>
-                            <td>
-                              <div style={{ display: 'flex', gap: '4px' }} onClick={(e) => e.stopPropagation()}>
+                            <td style={{ width: isInfoMode ? '85px' : '65px', minWidth: isInfoMode ? '85px' : '65px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', gap: '4px', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
                                 <button
                                   type="button"
                                   className="btn-icon-subtle"
-                                  style={{ padding: '4px 6px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', cursor: 'pointer' }}
+                                  style={{ padding: '3px 6px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                                   onClick={() => handleOpenHistory(client)}
                                   title="View Cases & Financial History"
                                 >
-                                  <Eye size={13} color="#2563eb" />
+                                  <Eye size={12} color="#2563eb" />
+                                  {isInfoMode && <span style={{ fontSize: '10.5px', color: '#2563eb', fontWeight: '600' }}>History</span>}
                                 </button>
-                                <button
-                                  type="button"
-                                  className="btn-icon-subtle"
-                                  style={{ padding: '4px 6px', borderRadius: '4px', border: '1px solid #fecaca', background: '#fff1f2', cursor: 'pointer' }}
-                                  onClick={() => promptDeleteClient(client)}
-                                  title="Delete Client Record"
-                                >
-                                  <Trash2 size={13} color="#dc2626" />
-                                </button>
+                                {!isInfoMode && (
+                                  <button
+                                    type="button"
+                                    className="btn-icon-subtle"
+                                    style={{ padding: '3px 5px', borderRadius: '4px', border: '1px solid #fecaca', background: '#fff1f2', cursor: 'pointer' }}
+                                    onClick={() => promptDeleteClient(client)}
+                                    title="Delete Client Record"
+                                  >
+                                    <Trash2 size={12} color="#dc2626" />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>

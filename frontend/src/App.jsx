@@ -45,8 +45,9 @@ export default function App() {
       <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
 
       {/* Module 1: Client Master */}
-      <Route path="/clients" element={<Protected><ClientManagement /></Protected>} />
-      <Route path="/client-master" element={<Protected><ClientManagement /></Protected>} />
+      <Route path="/clients" element={<Protected><ClientManagement viewMode="master" /></Protected>} />
+      <Route path="/client-master" element={<Protected><ClientManagement viewMode="master" /></Protected>} />
+      <Route path="/client-information" element={<Protected><ClientManagement viewMode="information" /></Protected>} />
 
       {/* Module 2: Case Master */}
       <Route path="/cases" element={<Protected><CaseManagement /></Protected>} />

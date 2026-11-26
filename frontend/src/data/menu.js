@@ -36,7 +36,6 @@ export const CASE_OPERATIONS_MODULES = [
   { slug: 'extra-brief',                  label: 'Extra Brief (Evidence)',        icon: Scale,            desc: 'Court brief to other advocate' },
   { slug: 'for-wise-case-report',         label: 'For / Purpose Wise Report',     icon: Layers,           desc: 'Case status by hearing purpose' },
   { slug: 'document-upload',              label: 'Document Upload System',        icon: UploadCloud,      desc: 'ID-wise document upload system' },
-  { slug: 'welcome-screen',               label: 'Reception Welcome Screen',      icon: Sparkles,         desc: 'Client chamber greeting display' },
   { slug: 'tv-display',                   label: 'TV Announcement Display',       icon: Tv,               desc: 'Digital signage & consultancy queue' },
 ]
 
@@ -45,13 +44,11 @@ export const ACCOUNTS_FINANCIAL_MODULES = [
   { slug: 'client-billing',              label: 'Client Billing',                icon: CreditCard,       desc: 'Record case fee receipts & billing' },
   { slug: 'client-payment',              label: 'Client Payment',                icon: FileText,         desc: 'Date-wise payment history' },
   { slug: 'expense',                     label: 'Expense Management',            icon: TrendingDown,     desc: 'Record office & court expenses' },
-  { slug: 'expense-head-master',         label: 'Expense Head Master',           icon: Tags,             desc: 'Expenditure categories & ledger heads' },
   { slug: 'consultancy-fees',            label: 'Consultancy Fees',              icon: BadgeIndianRupee, desc: 'Consultation entries (No Case ID)' },
   { slug: 'due-list',                    label: 'Outstanding Chamber Dues',      icon: AlertTriangle,    desc: 'Cases with pending fee balances' },
   { slug: 'income-expense-report',       label: 'Income & Expense Reports',      icon: ChartPie,         desc: 'Overall financial balance & profit' },
   { slug: 'client-ledger-report',        label: 'Client Ledger',                 icon: BookOpen,         desc: 'Client statement & fee balance' },
   { slug: 'daily-collection-report',     label: 'Daily Collection Report',       icon: Receipt,          desc: 'Day-wise case & consultancy collections' },
-  { slug: 'head-wise-expense-report',    label: 'Head Wise Expense Report',      icon: ClipboardList,    desc: 'Categorized expenditure statements' },
 ]
 
 export const MASTER_ENTRY = CASE_OPERATIONS_MODULES.slice(0, 2)

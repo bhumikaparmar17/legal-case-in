@@ -159,42 +159,130 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   // ----------------------------------------------------
   // Filter cases/clients for Bill Registration
   const billSearchResults = useMemo(() => {
-    if (!billSearchQuery.trim()) return []
-    const q = billSearchQuery.toLowerCase()
-    return cases.filter((cs) => {
+    const q = billSearchQuery.trim().toLowerCase()
+
+    // 1. Matching cases from Case Master
+    const matchedCases = cases.filter((cs) => {
+      if (!q) return true
       return (
-        (cs.clientId && cs.clientId.toLowerCase().includes(q)) ||
-        (cs.clientName && cs.clientName.toLowerCase().includes(q)) ||
-        (cs.id && cs.id.toLowerCase().includes(q)) ||
-        (cs.caseNumber && cs.caseNumber.toLowerCase().includes(q)) ||
-        (cs.phone && cs.phone.includes(q))
+        (cs.clientId && String(cs.clientId).toLowerCase().includes(q)) ||
+        (cs.clientName && String(cs.clientName).toLowerCase().includes(q)) ||
+        (cs.id && String(cs.id).toLowerCase().includes(q)) ||
+        (cs.caseNumber && String(cs.caseNumber).toLowerCase().includes(q)) ||
+        (cs.phone && String(cs.phone).includes(q))
       )
-    }).slice(0, 8)
-  }, [cases, billSearchQuery])
+    })
+
+    // 2. Matching clients from Client Master
+    const matchedClients = clients.filter((c) => {
+      if (!q) return true
+      const cId = String(c.clientId || c.id || '').toLowerCase()
+      const cName = String(c.clientName || c.name || '').toLowerCase()
+      const cPhone = String(c.phone || c.mobile || '')
+      return cId.includes(q) || cName.includes(q) || cPhone.includes(q)
+    })
+
+    // Map clients into selectable billing items
+    const clientOptions = matchedClients.map((c) => {
+      const cId = String(c.clientId || c.id || '')
+      const cName = c.clientName || c.name || ''
+      const existingCase = cases.find((cs) =>
+        (cs.clientId && String(cs.clientId).toLowerCase() === cId.toLowerCase()) ||
+        (cs.clientName && String(cs.clientName).trim().toLowerCase() === cName.trim().toLowerCase())
+      )
+
+      return {
+        id: existingCase ? existingCase.id : `client-${cId}`,
+        dropdownKey: `client-${cId}`,
+        caseId: existingCase ? existingCase.id : `CLIENT-${cId}`,
+        clientId: cId,
+        clientName: cName,
+        caseNumber: existingCase ? existingCase.caseNumber : 'Direct Client (No Case Docket)',
+        courtName: existingCase ? (existingCase.courtName || 'Court') : 'Chamber Consultation',
+        contractAmount: Number(c.fees || existingCase?.contractAmount || existingCase?.tcc || 0),
+        phone: c.phone || c.mobile || '',
+        isDirectClient: !existingCase,
+      }
+    })
+
+    const seenKeys = new Set()
+    const combined = []
+
+    // Priority 1: Add matched cases
+    for (const cs of matchedCases) {
+      const key = `case-${cs.id}`
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
+        combined.push({
+          ...cs,
+          dropdownKey: key,
+          caseId: cs.id,
+          clientId: cs.clientId || String(cs.id),
+          clientName: cs.clientName || '',
+          caseNumber: cs.caseNumber || cs.caseNo || '',
+          courtName: cs.courtName || '',
+          contractAmount: Number(cs.contractAmount || cs.tcc || cs.totalFees || 0),
+        })
+      }
+      if (combined.length >= 6 && q) break
+    }
+
+    // Priority 2: Add matched clients (including newly added clients with no court case docket yet)
+    for (const cl of clientOptions) {
+      const alreadyHasCase = combined.some(
+        (item) => String(item.clientId).toLowerCase() === String(cl.clientId).toLowerCase()
+      )
+      if (!alreadyHasCase && !seenKeys.has(cl.dropdownKey)) {
+        seenKeys.add(cl.dropdownKey)
+        combined.push(cl)
+      }
+      if (combined.length >= 10) break
+    }
+
+    // If query exists and room left, allow direct billing entry even if case exists
+    if (q && combined.length < 8) {
+      for (const cl of clientOptions) {
+        const directKey = `direct-${cl.clientId}`
+        if (!seenKeys.has(directKey) && !seenKeys.has(cl.dropdownKey)) {
+          seenKeys.add(directKey)
+          combined.push({ ...cl, dropdownKey: directKey })
+        }
+        if (combined.length >= 8) break
+      }
+    }
+
+    return combined.slice(0, 10)
+  }, [cases, clients, billSearchQuery])
 
   const handleSelectCaseForBill = (cs) => {
-    const contract = Number(cs.contractAmount || cs.tcc || cs.totalFees || 0)
+    const contract = Number(cs.contractAmount || cs.tcc || cs.totalFees || cs.fees || 0)
     const addl = Number(billFormData.additionalCharges || 0)
     const disc = Number(billFormData.discount || 0)
     const total = Math.max(0, contract + addl - disc)
 
+    const resolvedClientId = cs.clientId || String(cs.id) || 'CL-1001'
+    const resolvedClientName = cs.clientName || cs.name || ''
+    const resolvedCaseId = cs.caseId || (cs.isDirectClient ? `CLIENT-${resolvedClientId}` : cs.id)
+    const resolvedCaseNo = cs.caseNumber || (cs.isDirectClient ? 'Direct Client (No Case Docket)' : '')
+    const resolvedCourt = cs.courtName || (cs.isDirectClient ? 'Chamber Consultation' : '')
+
     setSelectedBillId(null)
     setSelectedClientFilter({
-      clientId: cs.clientId || '',
-      clientName: cs.clientName || '',
+      clientId: resolvedClientId,
+      clientName: resolvedClientName,
     })
 
     setBillFormData((prev) => ({
       ...prev,
-      caseId: cs.id,
-      clientId: cs.clientId || 'CL-1001',
-      clientName: cs.clientName,
-      caseNumber: cs.caseNumber || '',
-      courtName: cs.courtName || '',
+      caseId: resolvedCaseId,
+      clientId: resolvedClientId,
+      clientName: resolvedClientName,
+      caseNumber: resolvedCaseNo,
+      courtName: resolvedCourt,
       contractAmount: String(contract),
       totalBillAmount: String(total),
     }))
-    setBillSearchQuery(`${cs.clientId} - ${cs.clientName} (${cs.caseNumber || cs.id})`)
+    setBillSearchQuery(`${resolvedClientId} - ${resolvedClientName} (${resolvedCaseNo})`)
     setBillDropdownOpen(false)
     if (billErrors.caseId) setBillErrors((prev) => ({ ...prev, caseId: null }))
   }
@@ -310,47 +398,135 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   // ----------------------------------------------------
   // Filter cases/bills for Payment Receipt
   const paymentSearchResults = useMemo(() => {
-    if (!paymentSearchQuery.trim()) return []
-    const q = paymentSearchQuery.toLowerCase()
-    return cases.filter((cs) => {
+    const q = paymentSearchQuery.trim().toLowerCase()
+
+    // 1. Matching cases
+    const matchedCases = cases.filter((cs) => {
+      if (!q) return true
       return (
-        (cs.clientId && cs.clientId.toLowerCase().includes(q)) ||
-        (cs.clientName && cs.clientName.toLowerCase().includes(q)) ||
-        (cs.id && cs.id.toLowerCase().includes(q)) ||
-        (cs.caseNumber && cs.caseNumber.toLowerCase().includes(q)) ||
-        (cs.phone && cs.phone.includes(q))
+        (cs.clientId && String(cs.clientId).toLowerCase().includes(q)) ||
+        (cs.clientName && String(cs.clientName).toLowerCase().includes(q)) ||
+        (cs.id && String(cs.id).toLowerCase().includes(q)) ||
+        (cs.caseNumber && String(cs.caseNumber).toLowerCase().includes(q)) ||
+        (cs.phone && String(cs.phone).includes(q))
       )
-    }).slice(0, 8)
-  }, [cases, paymentSearchQuery])
+    })
+
+    // 2. Matching clients
+    const matchedClients = clients.filter((c) => {
+      if (!q) return true
+      const cId = String(c.clientId || c.id || '').toLowerCase()
+      const cName = String(c.clientName || c.name || '').toLowerCase()
+      const cPhone = String(c.phone || c.mobile || '')
+      return cId.includes(q) || cName.includes(q) || cPhone.includes(q)
+    })
+
+    const clientOptions = matchedClients.map((c) => {
+      const cId = String(c.clientId || c.id || '')
+      const cName = c.clientName || c.name || ''
+      const existingCase = cases.find((cs) =>
+        (cs.clientId && String(cs.clientId).toLowerCase() === cId.toLowerCase()) ||
+        (cs.clientName && String(cs.clientName).trim().toLowerCase() === cName.trim().toLowerCase())
+      )
+
+      const clientBills = bills.filter((b) =>
+        String(b.clientId).toLowerCase() === cId.toLowerCase() ||
+        (b.clientName && String(b.clientName).trim().toLowerCase() === cName.trim().toLowerCase())
+      )
+      const totalBilled = clientBills.reduce((sum, b) => sum + Number(b.totalBillAmount || b.amount || 0), 0)
+      const totalPaid = clientBills.reduce((sum, b) => sum + Number(b.paidAmount || 0), 0)
+      const calculatedDue = Math.max(0, totalBilled - totalPaid)
+
+      return {
+        id: existingCase ? existingCase.id : `client-${cId}`,
+        dropdownKey: `client-${cId}`,
+        caseId: existingCase ? existingCase.id : `CLIENT-${cId}`,
+        clientId: cId,
+        clientName: cName,
+        caseNumber: existingCase ? existingCase.caseNumber : 'Direct Client / Advance Fee',
+        courtName: existingCase ? (existingCase.courtName || 'Court') : 'Chamber Consultation',
+        contractAmount: Number(c.fees || totalBilled || existingCase?.contractAmount || 0),
+        dueAmount: existingCase ? (existingCase.dueAmount || 0) : calculatedDue,
+        phone: c.phone || c.mobile || '',
+        isDirectClient: !existingCase,
+      }
+    })
+
+    const seenKeys = new Set()
+    const combined = []
+
+    for (const cs of matchedCases) {
+      const key = `case-${cs.id}`
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
+        combined.push({
+          ...cs,
+          dropdownKey: key,
+          caseId: cs.id,
+          clientId: cs.clientId || String(cs.id),
+          clientName: cs.clientName || '',
+          caseNumber: cs.caseNumber || cs.caseNo || '',
+          courtName: cs.courtName || '',
+          contractAmount: Number(cs.contractAmount || cs.tcc || cs.totalFees || 0),
+          dueAmount: Number(cs.dueAmount !== undefined ? cs.dueAmount : 0),
+        })
+      }
+      if (combined.length >= 6 && q) break
+    }
+
+    for (const cl of clientOptions) {
+      const alreadyHasCase = combined.some(
+        (item) => String(item.clientId).toLowerCase() === String(cl.clientId).toLowerCase()
+      )
+      if (!alreadyHasCase && !seenKeys.has(cl.dropdownKey)) {
+        seenKeys.add(cl.dropdownKey)
+        combined.push(cl)
+      }
+      if (combined.length >= 10) break
+    }
+
+    return combined.slice(0, 10)
+  }, [cases, clients, bills, paymentSearchQuery])
 
   const handleSelectCaseForPayment = (cs) => {
-    const contract = Number(cs.contractAmount || cs.tcc || cs.totalFees || 0)
+    const contract = Number(cs.contractAmount || cs.tcc || cs.totalFees || cs.fees || 0)
     const paid = Number(cs.paidAmount || 0)
     const due = Number(cs.dueAmount !== undefined ? cs.dueAmount : Math.max(0, contract - paid))
 
+    const resolvedClientId = cs.clientId || String(cs.id) || 'CL-1001'
+    const resolvedClientName = cs.clientName || cs.name || ''
+    const resolvedCaseId = cs.caseId || (cs.isDirectClient ? `CLIENT-${resolvedClientId}` : cs.id)
+    const resolvedCaseNo = cs.caseNumber || (cs.isDirectClient ? 'Direct Client / Chamber' : '')
+
     // Check if there's a matching bill
-    const relatedBill = bills.find((b) => b.caseId === cs.id)
+    const relatedBill = bills.find((b) =>
+      b.caseId === resolvedCaseId ||
+      String(b.clientId).toLowerCase() === String(resolvedClientId).toLowerCase() ||
+      (b.clientName && String(b.clientName).trim().toLowerCase() === resolvedClientName.trim().toLowerCase())
+    )
+
+    const billedTotal = relatedBill ? Number(relatedBill.totalBillAmount || relatedBill.amount || 0) : contract
 
     setSelectedPaymentId(null)
     setSelectedPaymentClientFilter({
-      clientId: cs.clientId || '',
-      clientName: cs.clientName || '',
+      clientId: resolvedClientId,
+      clientName: resolvedClientName,
     })
 
     setPaymentFormData((prev) => ({
       ...prev,
-      caseId: cs.id,
-      clientId: cs.clientId || 'CL-1001',
-      clientName: cs.clientName,
+      caseId: resolvedCaseId,
+      clientId: resolvedClientId,
+      clientName: resolvedClientName,
       billId: relatedBill ? relatedBill.id : '',
       contract: String(contract),
-      totalBillAmount: String(relatedBill ? relatedBill.totalBillAmount : contract),
+      totalBillAmount: String(billedTotal),
       alreadyPaid: String(paid),
       dueAmount: String(due),
       amount: '',
       dueAfterPayment: String(due),
     }))
-    setPaymentSearchQuery(`${cs.clientId} - ${cs.clientName} (${cs.caseNumber || cs.id})`)
+    setPaymentSearchQuery(`${resolvedClientId} - ${resolvedClientName} (${resolvedCaseNo})`)
     setPaymentDropdownOpen(false)
     if (paymentErrors.caseId) setPaymentErrors((prev) => ({ ...prev, caseId: null }))
   }
@@ -738,7 +914,7 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                       }}>
                         {billSearchResults.map((cs) => (
                           <div
-                            key={cs.id}
+                            key={cs.dropdownKey || cs.id}
                             onClick={() => handleSelectCaseForBill(cs)}
                             style={{
                               padding: '10px 12px',
@@ -1180,7 +1356,7 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                       }}>
                         {paymentSearchResults.map((cs) => (
                           <div
-                            key={cs.id}
+                            key={cs.dropdownKey || cs.id}
                             onClick={() => handleSelectCaseForPayment(cs)}
                             style={{
                               padding: '10px 12px',

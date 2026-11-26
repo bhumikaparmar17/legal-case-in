@@ -8,7 +8,7 @@ import { OFFICE, ALL_MODULES } from '../data/menu.js'
 const slugToRoute = (slug) => {
   const special = {
     'client-master':       '/clients',
-    'client-information':  '/clients',
+    'client-information':  '/module/client-information',
     'case-master':         '/cases',
     'case-next-entry':     '/reminders',
     'consultancy-fees':    '/consultancy-fees',
@@ -180,7 +180,7 @@ export default function Topbar() {
             aria-expanded={searchOpen}
             autoComplete="off"
           />
-          {query ? (
+          {query && (
             <button
               onClick={clearSearch}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', display: 'flex', alignItems: 'center', color: '#888' }}
@@ -189,8 +189,6 @@ export default function Topbar() {
             >
               <X size={13} />
             </button>
-          ) : (
-            <kbd className="tb-shortcut">Ctrl K</kbd>
           )}
 
           {/* Search Results Dropdown */}

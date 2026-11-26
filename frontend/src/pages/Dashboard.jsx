@@ -68,61 +68,58 @@ export default function Dashboard() {
 
   return (
     <div className="app-shell dashboard-page">
-      {/* Sleek brand & quick navigation rail */}
-      <aside className="rail">
-        <div className="rail-top">
-          <button className="rail-brand-icon" onClick={() => navigate('/dashboard')} title="LegalCase Dashboard">
-            <Scale size={18} strokeWidth={2.4} />
-          </button>
-          <div className="rail-sep" />
-          <nav className="rail-nav">
-            <button className="rail-btn active" onClick={() => navigate('/dashboard')} title="Dashboard">
-              <LayoutDashboard size={17} />
-              <span className="rail-tip">Dashboard</span>
-            </button>
-            <button className="rail-btn" onClick={() => go('/cases')} title="Case Management">
-              <Briefcase size={17} />
-              <span className="rail-tip">Cases</span>
-            </button>
-            <button className="rail-btn" onClick={() => go('/clients')} title="Client Management">
-              <Scale size={17} />
-              <span className="rail-tip">Clients</span>
-            </button>
-            <button className="rail-btn" onClick={() => go('/payments')} title="Payment & Accounts">
-              <CreditCard size={17} />
-              <span className="rail-tip">Payments</span>
-            </button>
-            <button className="rail-btn" onClick={() => go('/due-list')} title="Outstanding Due List">
-              <AlertTriangle size={17} />
-              <span className="rail-tip">Dues</span>
-            </button>
-            <button className="rail-btn" onClick={() => go('/reminders')} title="Hearing Schedule">
-              <BellRing size={17} />
-              <span className="rail-tip">Hearings</span>
-            </button>
-            <button className="rail-btn" onClick={() => go('/case-search')} title="Reports & Query">
-              <BarChart3 size={17} />
-              <span className="rail-tip">Search</span>
-            </button>
-          </nav>
-        </div>
+      <Topbar />
 
-        <div className="rail-bottom">
-          <button
-            className="rail-qr"
-            title="Advocate Chambers Digital Verification QR"
-            onClick={() => alert('Advocate Chambers Digital Verification QR')}
-          >
-            <QrCode size={18} />
-          </button>
-          <span className="rail-brand">Netprogen.</span>
-        </div>
-      </aside>
+      <div className="dash-body-layout">
+        {/* Sleek quick navigation rail (starts below Topbar, without redundant logo) */}
+        <aside className="rail">
+          <div className="rail-top">
+            <nav className="rail-nav">
+              <button className="rail-btn active" onClick={() => navigate('/dashboard')} title="Dashboard">
+                <LayoutDashboard size={17} />
+                <span className="rail-tip">Dashboard</span>
+              </button>
+              <button className="rail-btn" onClick={() => go('/cases')} title="Case Management">
+                <Briefcase size={17} />
+                <span className="rail-tip">Cases</span>
+              </button>
+              <button className="rail-btn" onClick={() => go('/clients')} title="Client Management">
+                <Scale size={17} />
+                <span className="rail-tip">Clients</span>
+              </button>
+              <button className="rail-btn" onClick={() => go('/payments')} title="Payment & Accounts">
+                <CreditCard size={17} />
+                <span className="rail-tip">Payments</span>
+              </button>
+              <button className="rail-btn" onClick={() => go('/due-list')} title="Outstanding Due List">
+                <AlertTriangle size={17} />
+                <span className="rail-tip">Dues</span>
+              </button>
+              <button className="rail-btn" onClick={() => go('/reminders')} title="Hearing Schedule">
+                <BellRing size={17} />
+                <span className="rail-tip">Hearings</span>
+              </button>
+              <button className="rail-btn" onClick={() => go('/case-search')} title="Reports & Query">
+                <BarChart3 size={17} />
+                <span className="rail-tip">Search</span>
+              </button>
+            </nav>
+          </div>
 
-      <div className="app-main">
-        <Topbar />
+          <div className="rail-bottom">
+            <button
+              className="rail-qr"
+              title="Advocate Chambers Digital Verification QR"
+              onClick={() => alert('Advocate Chambers Digital Verification QR')}
+            >
+              <QrCode size={18} />
+            </button>
+            <span className="rail-brand">Netprogen.</span>
+          </div>
+        </aside>
 
-        <main className="dash">
+        <div className="app-main">
+          <main className="dash">
           {/* Executive Dashboard Header */}
           <div className="dash-head">
             <div className="dash-head-text">
@@ -259,5 +256,6 @@ export default function Dashboard() {
         </main>
       </div>
     </div>
-  )
+  </div>
+)
 }
