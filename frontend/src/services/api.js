@@ -48,6 +48,7 @@ export const api = {
   // Next Dates / Reminders (CaseNext)
   getReminders: () => request('/reminders'),
   createReminder: (data) => request('/reminders', { method: 'POST', body: JSON.stringify(data) }),
+  updateReminder: (id, data) => request(`/reminders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteReminder: (id) => request(`/reminders/${id}`, { method: 'DELETE' }),
 
   // Billing (Billing)
@@ -58,15 +59,37 @@ export const api = {
   // Payments (Payment)
   getPayments: () => request('/payments'),
   createPayment: (data) => request('/payments', { method: 'POST', body: JSON.stringify(data) }),
+  updatePayment: (id, data) => request(`/payments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePayment: (id) => request(`/payments/${id}`, { method: 'DELETE' }),
+
+  // Direct Consultancy Fees (No Case ID - ClientMaster ConFees & Payment)
+  getConsultancyFees: () => request('/consultancy-fees'),
+  createConsultancyFee: (data) => request('/consultancy-fees', { method: 'POST', body: JSON.stringify(data) }),
+  updateConsultancyFee: (id, data) => request(`/consultancy-fees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteConsultancyFee: (id) => request(`/consultancy-fees/${id}`, { method: 'DELETE' }),
+
+  // Extra Brief for Court to Other Advocate (Evidence)
+  getExtraBriefs: () => request('/extra-briefs'),
+  createExtraBrief: (data) => request('/extra-briefs', { method: 'POST', body: JSON.stringify(data) }),
+  updateExtraBrief: (id, data) => request(`/extra-briefs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExtraBrief: (id) => request(`/extra-briefs/${id}`, { method: 'DELETE' }),
+
+  // ID-Wise Document Upload Repository
+  getDocuments: (filterId) => request(`/documents${filterId ? `?filterId=${encodeURIComponent(filterId)}` : ''}`),
+  getDocumentById: (id) => request(`/documents/${id}`),
+  uploadDocument: (data) => request('/documents', { method: 'POST', body: JSON.stringify(data) }),
+  deleteDocument: (id) => request(`/documents/${id}`, { method: 'DELETE' }),
 
   // Expense Heads (ExpenseHeadMaster)
   getExpenseHeads: () => request('/expense-heads'),
   createExpenseHead: (data) => request('/expense-heads', { method: 'POST', body: JSON.stringify(data) }),
+  updateExpenseHead: (id, data) => request(`/expense-heads/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExpenseHead: (id) => request(`/expense-heads/${id}`, { method: 'DELETE' }),
 
   // Expenses (Expense)
   getExpenses: () => request('/expenses'),
   createExpense: (data) => request('/expenses', { method: 'POST', body: JSON.stringify(data) }),
+  updateExpense: (id, data) => request(`/expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteExpense: (id) => request(`/expenses/${id}`, { method: 'DELETE' }),
 
   // Waiting List (WaitingList)

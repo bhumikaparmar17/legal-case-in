@@ -11,6 +11,7 @@ import {
   getClients, getCases, getDocuments, saveDocument,
   getDocumentById, deleteDocument, onStorageUpdate
 } from '../services/storageService.js'
+import { api } from '../services/api.js'
 import './management.css'
 
 export default function DocumentUploadSystem() {
@@ -40,6 +41,12 @@ export default function DocumentUploadSystem() {
   const [formErrors, setFormErrors] = useState({})
 
   useEffect(() => {
+    api.getDocuments().then((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setDocuments(data)
+      }
+    }).catch(() => {})
+
     return onStorageUpdate(() => {
       setClients(getClients())
       setCases(getCases())

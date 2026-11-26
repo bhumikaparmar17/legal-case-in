@@ -11,6 +11,7 @@ import {
   getExtraBriefs, saveExtraBrief, updateExtraBrief, deleteExtraBrief,
   getClients, onStorageUpdate
 } from '../services/storageService.js'
+import { api } from '../services/api.js'
 import './management.css'
 
 export default function ExtraBriefAdvocate() {
@@ -40,6 +41,12 @@ export default function ExtraBriefAdvocate() {
   const [formData, setFormData] = useState(initialForm)
 
   useEffect(() => {
+    api.getExtraBriefs().then((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setBriefs(data)
+      }
+    }).catch(() => {})
+
     return onStorageUpdate(() => {
       setBriefs(getExtraBriefs())
       setClients(getClients())

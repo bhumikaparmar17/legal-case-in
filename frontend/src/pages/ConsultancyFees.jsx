@@ -11,6 +11,7 @@ import {
   getConsultancyFees, saveConsultancyFee, updateConsultancyFee,
   deleteConsultancyFee, onStorageUpdate
 } from '../services/storageService.js'
+import { api } from '../services/api.js'
 import './management.css'
 
 export default function ConsultancyFees() {
@@ -37,6 +38,12 @@ export default function ConsultancyFees() {
   const [errors, setErrors] = useState({})
 
   useEffect(() => {
+    api.getConsultancyFees().then((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setRecords(data)
+      }
+    }).catch(() => {})
+
     return onStorageUpdate(() => {
       setRecords(getConsultancyFees())
     })

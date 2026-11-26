@@ -539,6 +539,7 @@ export function clearCaseDue(caseId) {
   cases[idx].updatedAt = new Date().toISOString()
 
   writeStorage(CASES_KEY, cases)
+  api.updateCase(cases[idx].id, { totalFees: paid }).catch((e) => console.warn('MySQL clearCaseDue sync:', e.message))
   return cases[idx]
 }
 
@@ -594,6 +595,26 @@ export function savePayment(paymentData, updateCaseRecord = true) {
     recalculateCaseFinancials(paymentData.caseId)
   }
 
+  // Persist to MySQL Payment table
+  const apiPayload = {
+    clientId: paymentData.clientId,
+    paymentDate: newPayment.paymentDate,
+    amount: newPayment.amount,
+    paidAmount: newPayment.amount,
+    remarks: paymentData.remarks || paymentData.details || paymentData.mode || 'Payment',
+    details: paymentData.remarks || paymentData.details || paymentData.mode || 'Payment',
+  }
+  api.createPayment(apiPayload).then((res) => {
+    if (res && res.id) {
+      const current = getPayments()
+      const idx = current.findIndex((p) => p.id === newId)
+      if (idx !== -1) {
+        current[idx] = { ...current[idx], id: String(res.id) }
+        writeStorage(PAYMENTS_KEY, current)
+      }
+    }
+  }).catch((e) => console.warn('MySQL savePayment sync:', e.message))
+
   return newPayment
 }
 
@@ -618,6 +639,16 @@ export function updatePayment(id, paymentData) {
   if (updatedPayment.caseId) {
     recalculateCaseFinancials(updatedPayment.caseId)
   }
+
+  // Persist update to MySQL Payment table
+  api.updatePayment(id, {
+    clientId: updatedPayment.clientId,
+    paymentDate: updatedPayment.paymentDate,
+    amount: updatedPayment.amount,
+    paidAmount: updatedPayment.amount,
+    remarks: updatedPayment.remarks || updatedPayment.details || updatedPayment.mode || '',
+    details: updatedPayment.remarks || updatedPayment.details || updatedPayment.mode || '',
+  }).catch((e) => console.warn('MySQL updatePayment sync:', e.message))
 
   return updatedPayment
 }
@@ -809,6 +840,20 @@ export function saveAppearance(entryData) {
 
   const updated = [newEntry, ...appearances]
   writeStorage(APPEARANCES_KEY, updated)
+
+  // Persist to MySQL CaseNext hearing records
+  const appearanceDate = entryData.appearanceDate || entryData.nextDate || new Date().toISOString().split('T')[0]
+  api.createReminder({
+    caseId: entryData.caseId,
+    clientName: entryData.clientName,
+    phone: entryData.phone,
+    nextDate: appearanceDate,
+    for: entryData.purpose || 'Court appearance',
+    courtName: entryData.courtName || '',
+    ppName: entryData.ppName || '',
+    otherAc: entryData.otherCaseNumber || '',
+  }).catch((e) => console.warn('MySQL saveAppearance sync:', e.message))
+
   return newEntry
 }
 
@@ -917,7 +962,16 @@ export function saveExpenseHead(headData) {
 
   const updated = [newHead, ...heads]
   writeStorage(EXPENSE_HEADS_KEY, updated)
-  api.createExpenseHead(headData).catch((e) => console.warn('MySQL saveExpenseHead sync:', e.message))
+  api.createExpenseHead(headData).then((res) => {
+    if (res && res.id) {
+      const current = getExpenseHeads()
+      const idx = current.findIndex((h) => h.id === newId)
+      if (idx !== -1) {
+        current[idx] = { ...current[idx], id: String(res.id) }
+        writeStorage(EXPENSE_HEADS_KEY, current)
+      }
+    }
+  }).catch((e) => console.warn('MySQL saveExpenseHead sync:', e.message))
   return newHead
 }
 
@@ -928,6 +982,7 @@ export function updateExpenseHead(id, headData) {
 
   heads[idx] = { ...heads[idx], ...headData, id }
   writeStorage(EXPENSE_HEADS_KEY, heads)
+  api.updateExpenseHead(id, headData).catch((e) => console.warn('MySQL updateExpenseHead sync:', e.message))
   return heads[idx]
 }
 
@@ -941,6 +996,7 @@ export function deleteExpenseHead(id) {
   const heads = getExpenseHeads()
   const filtered = heads.filter((h) => String(h.id).toLowerCase() !== String(id).toLowerCase())
   writeStorage(EXPENSE_HEADS_KEY, filtered)
+  api.deleteExpenseHead(id).catch((e) => console.warn('MySQL deleteExpenseHead sync:', e.message))
   return true
 }
 
@@ -996,6 +1052,7 @@ export function updateExpense(id, expenseData) {
     updatedAt: new Date().toISOString(),
   }
   writeStorage(EXPENSES_KEY, expenses)
+  api.updateExpense(id, expenseData).catch((e) => console.warn('MySQL updateExpense sync:', e.message))
   return expenses[idx]
 }
 
@@ -1053,6 +1110,26 @@ export function saveConsultancyFee(feeData) {
 
   const updated = [newEntry, ...fees]
   writeStorage(CONSULTANCY_KEY, updated)
+
+  // Sync to MySQL ClientMaster & Payment via Backend API
+  api.createConsultancyFee({
+    clientName: newEntry.clientName,
+    phone: newEntry.phone,
+    consultationDate: newEntry.consultationDate,
+    amount: newEntry.amount,
+    paymentMode: newEntry.paymentMode || 'Cash',
+    remarks: newEntry.remarks || '',
+  }).then((res) => {
+    if (res && res.id) {
+      const current = getConsultancyFees()
+      const idx = current.findIndex((f) => f.id === newId)
+      if (idx !== -1) {
+        current[idx] = { ...current[idx], id: String(res.id), dbId: res.dbId }
+        writeStorage(CONSULTANCY_KEY, current)
+      }
+    }
+  }).catch((e) => console.warn('MySQL saveConsultancyFee sync:', e.message))
+
   return newEntry
 }
 
@@ -1069,6 +1146,17 @@ export function updateConsultancyFee(id, feeData) {
     updatedAt: new Date().toISOString(),
   }
   writeStorage(CONSULTANCY_KEY, fees)
+
+  // Sync update to MySQL
+  api.updateConsultancyFee(id, {
+    clientName: fees[idx].clientName,
+    phone: fees[idx].phone,
+    consultationDate: fees[idx].consultationDate,
+    amount: fees[idx].amount,
+    paymentMode: fees[idx].paymentMode,
+    remarks: fees[idx].remarks,
+  }).catch((e) => console.warn('MySQL updateConsultancyFee sync:', e.message))
+
   return fees[idx]
 }
 
@@ -1076,6 +1164,7 @@ export function deleteConsultancyFee(id) {
   const fees = getConsultancyFees()
   const filtered = fees.filter((f) => String(f.id).toLowerCase() !== String(id).toLowerCase())
   writeStorage(CONSULTANCY_KEY, filtered)
+  api.deleteConsultancyFee(id).catch((e) => console.warn('MySQL deleteConsultancyFee sync:', e.message))
   return true
 }
 
@@ -1132,6 +1221,33 @@ export async function saveDocument(docData) {
 
   const updated = [docRecord, ...docs]
   writeStorage(DOCUMENTS_META_KEY, updated)
+
+  // Persist file and metadata to Backend API & MySQL audit log
+  api.uploadDocument({
+    entityType: docRecord.entityType,
+    associatedId: docRecord.associatedId,
+    idNumber: docRecord.idNumber,
+    docName: docRecord.docName,
+    docType: docRecord.docType,
+    fileSize: docRecord.fileSize,
+    fileType: docRecord.fileType,
+    fileData: docData.fileData || null,
+    remarks: docRecord.remarks,
+  }).then((res) => {
+    if (res && res.id) {
+      const current = getDocuments()
+      const idx = current.findIndex((d) => d.id === newId)
+      if (idx !== -1) {
+        current[idx] = {
+          ...current[idx],
+          id: String(res.id),
+          downloadUrl: res.downloadUrl || current[idx].downloadUrl,
+        }
+        writeStorage(DOCUMENTS_META_KEY, current)
+      }
+    }
+  }).catch((e) => console.warn('Backend uploadDocument sync:', e.message))
+
   return docRecord
 }
 
@@ -1141,7 +1257,16 @@ export async function getDocumentById(id) {
   if (fullDoc) return fullDoc
 
   const docs = getDocuments()
-  return docs.find((d) => String(d.id).toLowerCase() === String(id).toLowerCase()) || null
+  const localDoc = docs.find((d) => String(d.id).toLowerCase() === String(id).toLowerCase())
+  if (localDoc && localDoc.fileData) return localDoc
+
+  // Fetch full file from backend API if not in client storage
+  try {
+    const apiDoc = await api.getDocumentById(id)
+    if (apiDoc) return apiDoc
+  } catch (e) {}
+
+  return localDoc || null
 }
 
 export async function deleteDocument(id) {
@@ -1149,6 +1274,7 @@ export async function deleteDocument(id) {
   const docs = getDocuments()
   const filtered = docs.filter((d) => String(d.id).toLowerCase() !== String(id).toLowerCase())
   writeStorage(DOCUMENTS_META_KEY, filtered)
+  api.deleteDocument(id).catch((e) => console.warn('Backend deleteDocument sync:', e.message))
   return true
 }
 
@@ -1180,7 +1306,11 @@ export function saveReminder(reminderData) {
 
   const updated = [newReminder, ...reminders]
   writeStorage(REMINDERS_KEY, updated)
-  api.createReminder(reminderData).then((res) => {
+  api.createReminder({
+    ...reminderData,
+    nextDate: reminderData.date || reminderData.nextDate,
+    for: reminderData.reasons || reminderData.for,
+  }).then((res) => {
     if (res && res.id) {
       const current = getReminders()
       const idx = current.findIndex((r) => r.id === newId)
@@ -1200,6 +1330,11 @@ export function updateReminder(id, reminderData) {
 
   reminders[idx] = { ...reminders[idx], ...reminderData, id, updatedAt: new Date().toISOString() }
   writeStorage(REMINDERS_KEY, reminders)
+  api.updateReminder(id, {
+    ...reminderData,
+    nextDate: reminderData.date || reminderData.nextDate,
+    for: reminderData.reasons || reminderData.for,
+  }).catch((e) => console.warn('MySQL updateReminder sync:', e.message))
   return reminders[idx]
 }
 
@@ -1247,6 +1382,19 @@ export function saveExtraBrief(briefData) {
 
   const updated = [newBrief, ...briefs]
   writeStorage(EXTRA_BRIEFS_KEY, updated)
+
+  // Persist to Backend API & MySQL clientinformation
+  api.createExtraBrief(newBrief).then((res) => {
+    if (res && res.id) {
+      const current = getExtraBriefs()
+      const idx = current.findIndex((b) => b.id === newId)
+      if (idx !== -1) {
+        current[idx] = { ...current[idx], id: String(res.id) }
+        writeStorage(EXTRA_BRIEFS_KEY, current)
+      }
+    }
+  }).catch((e) => console.warn('Backend saveExtraBrief sync:', e.message))
+
   return newBrief
 }
 
@@ -1264,6 +1412,9 @@ export function updateExtraBrief(id, briefData) {
     updatedAt: new Date().toISOString(),
   }
   writeStorage(EXTRA_BRIEFS_KEY, briefs)
+
+  api.updateExtraBrief(id, briefs[idx]).catch((e) => console.warn('Backend updateExtraBrief sync:', e.message))
+
   return briefs[idx]
 }
 
@@ -1271,6 +1422,7 @@ export function deleteExtraBrief(id) {
   const briefs = getExtraBriefs()
   const filtered = briefs.filter((b) => String(b.id).toLowerCase() !== String(id).toLowerCase())
   writeStorage(EXTRA_BRIEFS_KEY, filtered)
+  api.deleteExtraBrief(id).catch((e) => console.warn('Backend deleteExtraBrief sync:', e.message))
   return true
 }
 
@@ -1556,6 +1708,9 @@ export async function initStorageSync() {
       memoryStore[EXPENSES_KEY] = res.data.expenses || []
       memoryStore[WAITING_LIST_KEY] = res.data.waitingList || []
       memoryStore[ANNOUNCEMENTS_KEY] = res.data.announcements || []
+      memoryStore[CONSULTANCY_KEY] = res.data.consultancyFees || []
+      memoryStore[EXTRA_BRIEFS_KEY] = res.data.extraBriefs || []
+      memoryStore[DOCUMENTS_META_KEY] = res.data.documents || []
 
       // Safely write to localStorage with quota protection
       const safeWrite = (k, v) => {
@@ -1571,6 +1726,9 @@ export async function initStorageSync() {
       safeWrite(EXPENSE_HEADS_KEY, res.data.expenseHeads || [])
       safeWrite(WAITING_LIST_KEY, res.data.waitingList || [])
       safeWrite(ANNOUNCEMENTS_KEY, res.data.announcements || [])
+      safeWrite(CONSULTANCY_KEY, res.data.consultancyFees || [])
+      safeWrite(EXTRA_BRIEFS_KEY, res.data.extraBriefs || [])
+      safeWrite(DOCUMENTS_META_KEY, res.data.documents || [])
       safeWrite(REMINDERS_KEY, (res.data.reminders || []).slice(0, 100))
       safeWrite(BILLS_KEY, (res.data.bills || []).slice(0, 100))
       safeWrite(PAYMENTS_KEY, (res.data.payments || []).slice(0, 100))

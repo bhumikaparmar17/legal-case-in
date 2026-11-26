@@ -594,6 +594,7 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
 
   const handleSavePayment = (e) => {
     if (e) e.preventDefault()
+    if (loading) return
     const errs = {}
     if (!paymentFormData.caseId) errs.caseId = 'Please select a Client Case Docket'
     if (!paymentFormData.amount || Number(paymentFormData.amount) <= 0) {

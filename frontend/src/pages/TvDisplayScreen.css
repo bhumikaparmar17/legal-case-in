@@ -5,21 +5,28 @@
    ========================================================================== */
 
 .tv-root {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
   width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 45%, #070a12 100%);
   color: #f8fafc;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: clamp(18px, 2.5vh, 32px) clamp(22px, 3vw, 44px);
+  padding: clamp(10px, 1.5vh, 20px) clamp(16px, 2vw, 32px);
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow: hidden;
   user-select: none;
+  z-index: 100;
 }
 
 :fullscreen .tv-root {
+  position: fixed;
+  inset: 0;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -27,11 +34,12 @@
 
 /* Header */
 .tv-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  padding-bottom: clamp(12px, 1.8vh, 18px);
+  padding-bottom: clamp(8px, 1.2vh, 14px);
 }
 
 .tv-brand-row {
@@ -146,9 +154,10 @@
    Multi-line text support without clipping, large readable headline & progress bar
    ========================================================================== */
 .tv-announcement-card {
-  margin: clamp(10px, 1.5vh, 18px) 0;
+  flex-shrink: 0;
+  margin: clamp(6px, 1vh, 14px) 0;
   border-radius: 14px;
-  padding: clamp(14px, 1.8vh, 22px) clamp(18px, 2vw, 28px);
+  padding: clamp(10px, 1.4vh, 18px) clamp(16px, 1.8vw, 24px);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -286,9 +295,11 @@
 /* Main Display Grid: 1 or 2 columns based on empty state */
 .tv-main-grid {
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
-  gap: clamp(16px, 2vw, 26px);
-  margin: clamp(8px, 1.2vh, 16px) 0;
+  gap: clamp(12px, 1.5vw, 22px);
+  margin: clamp(4px, 0.8vh, 12px) 0;
   align-items: stretch;
 }
 
@@ -305,12 +316,16 @@
   border-radius: 16px;
   display: flex;
   flex-direction: column;
-  padding: clamp(18px, 2.2vh, 28px);
+  padding: clamp(12px, 1.5vh, 20px) clamp(14px, 1.6vw, 22px);
   backdrop-filter: blur(12px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .tv-queue-card.emergency {
@@ -326,12 +341,13 @@
 }
 
 .tv-qc-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 14px;
+  padding-bottom: clamp(8px, 1vh, 12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 16px;
+  margin-bottom: clamp(8px, 1.2vh, 14px);
 }
 
 .tv-qc-title-wrap {
@@ -407,13 +423,39 @@
 .tv-items-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: clamp(8px, 1vh, 12px);
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) rgba(255, 255, 255, 0.04);
+}
+
+.tv-items-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tv-items-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+}
+
+.tv-items-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+}
+
+.tv-items-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .tv-item-row {
+  flex-shrink: 0;
   border-radius: 12px;
-  padding: clamp(12px, 1.5vh, 18px) clamp(14px, 1.5vw, 22px);
+  padding: clamp(10px, 1.3vh, 16px) clamp(14px, 1.4vw, 20px);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -514,13 +556,17 @@
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
-  padding: clamp(36px, 5vh, 64px) 24px;
+  padding: clamp(24px, 3.5vh, 48px) 24px;
   text-align: center;
   backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .tv-empty-icon-ring {
@@ -551,11 +597,12 @@
 
 /* Footer Bar */
 .tv-footer {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding-top: clamp(10px, 1.5vh, 16px);
+  padding-top: clamp(8px, 1.2vh, 14px);
 }
 
 .tv-footer-left {

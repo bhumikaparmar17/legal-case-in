@@ -11,6 +11,7 @@ import {
   getReminders, saveReminder, updateReminder, deleteReminder,
   getClients, onStorageUpdate
 } from '../services/storageService.js'
+import { api } from '../services/api.js'
 import './management.css'
 
 export default function DateWiseReminders() {
@@ -19,7 +20,7 @@ export default function DateWiseReminders() {
   const [clients, setClients] = useState(() => getClients())
   const [selectedDate, setSelectedDate] = useState(() => {
     const r = getReminders()
-    return r.length > 0 ? r[0].date : new Date().toISOString().split('T')[0]
+    return r.length > 0 ? (r[0].date || r[0].nextDate || r[0].hearingDate || '') : new Date().toISOString().split('T')[0]
   })
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState(null)
@@ -39,6 +40,15 @@ export default function DateWiseReminders() {
   const [formData, setFormData] = useState(initialForm)
 
   useEffect(() => {
+    // Live API fetch on mount -> register in Network tab & hydrate
+    api.getReminders().then((data) => {
+      if (Array.isArray(data)) setReminders(data)
+    }).catch(() => {})
+
+    api.getClients().then((data) => {
+      if (Array.isArray(data)) setClients(data)
+    }).catch(() => {})
+
     return onStorageUpdate(() => {
       setReminders(getReminders())
       setClients(getClients())
@@ -119,13 +129,15 @@ export default function DateWiseReminders() {
 
   // Filter reminders by selectedDate and search
   const filteredReminders = reminders.filter((r) => {
-    const matchesDate = !selectedDate || r.date === selectedDate
+    const rDate = r.date || r.nextDate || r.hearingDate || ''
+    const matchesDate = !selectedDate || rDate === selectedDate
     const q = search.toLowerCase()
+    const rReasons = r.reasons || r.for || r.stage || ''
     const matchesSearch =
       !search ||
       (r.clientName && r.clientName.toLowerCase().includes(q)) ||
       (r.phone && r.phone.includes(q)) ||
-      (r.reasons && r.reasons.toLowerCase().includes(q)) ||
+      (rReasons && rReasons.toLowerCase().includes(q)) ||
       (r.courtName && r.courtName.toLowerCase().includes(q))
 
     return matchesDate && matchesSearch
@@ -138,7 +150,9 @@ export default function DateWiseReminders() {
       showToast('error', 'Mobile number missing or invalid.')
       return
     }
-    const msg = `CHAMBERS REMINDER (${OFFICE.name}):\nDear ${rem.clientName},\nThis is an advance court & chamber notice regarding:\n${rem.reasons}\nDate: ${rem.date}\nChambers: ${OFFICE.address}`
+    const remReasons = rem.reasons || rem.for || rem.stage || 'Court Appearance'
+    const remDate = rem.date || rem.nextDate || rem.hearingDate || 'Today'
+    const msg = `CHAMBERS REMINDER (${OFFICE.name}):\nDear ${rem.clientName},\nThis is an advance court & chamber notice regarding:\n${remReasons}\nDate: ${remDate}\nChambers: ${OFFICE.address}`
     const phoneWithCountry = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`
     window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`, '_blank')
     showToast('success', `WhatsApp launched for ${rem.clientName}!`)
@@ -301,7 +315,7 @@ export default function DateWiseReminders() {
                       {/* Reasons */}
                       <div>
                         <strong>Reasons :</strong>{' '}
-                        <span style={{ color: '#334155', lineHeight: '1.4' }}>{rem.reasons}</span>
+                        <span style={{ color: '#334155', lineHeight: '1.4' }}>{rem.reasons || rem.for || rem.stage || '—'}</span>
                       </div>
 
                       {/* Actions */}
@@ -376,10 +390,10 @@ export default function DateWiseReminders() {
                       filteredReminders.map((rem, idx) => (
                         <tr key={rem.id}>
                           <td><b>{idx + 1}</b></td>
-                          <td><span className="cell-date">{rem.date}</span></td>
+                          <td><span className="cell-date">{rem.date || rem.nextDate || rem.hearingDate || '—'}</span></td>
                           <td><strong className="primary-text">{rem.clientName}</strong></td>
-                          <td><span className="cell-phone">{rem.phone}</span></td>
-                          <td><span style={{ fontSize: '13px', color: '#334155' }}>{rem.reasons}</span></td>
+                          <td><span className="cell-phone">{rem.phone || '—'}</span></td>
+                          <td><span style={{ fontSize: '13px', color: '#334155' }}>{rem.reasons || rem.for || rem.stage || '—'}</span></td>
                           <td style={{ textAlign: 'center' }}>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
                               <button
