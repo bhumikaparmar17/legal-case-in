@@ -1,0 +1,82 @@
+// =====================================================================
+// Frontend API Client for LegalCase Management System
+// Connects to Node.js / Express Backend on http://localhost:5000/api
+// =====================================================================
+
+const API_BASE = 'http://localhost:5000/api'
+
+async function request(endpoint, options = {}) {
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+      ...options,
+    })
+    if (!res.ok) {
+      console.warn(`API ${endpoint} responded with status ${res.status}`)
+      return null
+    }
+    return await res.json()
+  } catch (err) {
+    console.warn(`API request ${endpoint} error:`, err.message)
+    return null
+  }
+}
+
+export const api = {
+  // Practice Overview Summary (Fast real-time SQL aggregation)
+  getOverview: () => request('/overview'),
+
+  // Snapshot sync for all modules
+  getSync: () => request('/sync'),
+
+  // Clients (ClientMaster)
+  getClients: () => request('/clients'),
+  createClient: (data) => request('/clients', { method: 'POST', body: JSON.stringify(data) }),
+  updateClient: (id, data) => request(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteClient: (id) => request(`/clients/${id}`, { method: 'DELETE' }),
+
+  // Cases (CaseMaster)
+  getCases: () => request('/cases'),
+  createCase: (data) => request('/cases', { method: 'POST', body: JSON.stringify(data) }),
+  createBulkCases: (data) => request('/cases/bulk', { method: 'POST', body: JSON.stringify(data) }),
+  updateCase: (id, data) => request(`/cases/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCase: (id) => request(`/cases/${id}`, { method: 'DELETE' }),
+
+  // Next Dates / Reminders (CaseNext)
+  getReminders: () => request('/reminders'),
+  createReminder: (data) => request('/reminders', { method: 'POST', body: JSON.stringify(data) }),
+  deleteReminder: (id) => request(`/reminders/${id}`, { method: 'DELETE' }),
+
+  // Billing (Billing)
+  getBills: () => request('/bills'),
+  createBill: (data) => request('/bills', { method: 'POST', body: JSON.stringify(data) }),
+  deleteBill: (id) => request(`/bills/${id}`, { method: 'DELETE' }),
+
+  // Payments (Payment)
+  getPayments: () => request('/payments'),
+  createPayment: (data) => request('/payments', { method: 'POST', body: JSON.stringify(data) }),
+  deletePayment: (id) => request(`/payments/${id}`, { method: 'DELETE' }),
+
+  // Expense Heads (ExpenseHeadMaster)
+  getExpenseHeads: () => request('/expense-heads'),
+  createExpenseHead: (data) => request('/expense-heads', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Expenses (Expense)
+  getExpenses: () => request('/expenses'),
+  createExpense: (data) => request('/expenses', { method: 'POST', body: JSON.stringify(data) }),
+  deleteExpense: (id) => request(`/expenses/${id}`, { method: 'DELETE' }),
+
+  // Waiting List (WaitingList)
+  getWaitingList: () => request('/waiting-list'),
+  createWaitingListEntry: (data) => request('/waiting-list', { method: 'POST', body: JSON.stringify(data) }),
+  updateWaitingListEntry: (id, data) => request(`/waiting-list/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteWaitingListEntry: (id) => request(`/waiting-list/${id}`, { method: 'DELETE' }),
+
+  // Announcements (Announcements)
+  getAnnouncements: () => request('/announcements'),
+  createAnnouncement: (data) => request('/announcements', { method: 'POST', body: JSON.stringify(data) }),
+  deleteAnnouncement: (id) => request(`/announcements/${id}`, { method: 'DELETE' }),
+}
