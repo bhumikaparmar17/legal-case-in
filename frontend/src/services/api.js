@@ -54,6 +54,7 @@ export const api = {
   // Billing (Billing)
   getBills: () => request('/bills'),
   createBill: (data) => request('/bills', { method: 'POST', body: JSON.stringify(data) }),
+  updateBill: (id, data) => request(`/bills/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteBill: (id) => request(`/bills/${id}`, { method: 'DELETE' }),
 
   // Payments (Payment)
@@ -102,4 +103,24 @@ export const api = {
   getAnnouncements: () => request('/announcements'),
   createAnnouncement: (data) => request('/announcements', { method: 'POST', body: JSON.stringify(data) }),
   deleteAnnouncement: (id) => request(`/announcements/${id}`, { method: 'DELETE' }),
+
+  // Consultancy Fees (ConsultancyFees)
+  getConsultancyFees: () => request('/consultancy-fees'),
+  createConsultancyFee: (data) => request('/consultancy-fees', { method: 'POST', body: JSON.stringify(data) }),
+  updateConsultancyFee: (id, data) => request(`/consultancy-fees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteConsultancyFee: (id) => request(`/consultancy-fees/${id}`, { method: 'DELETE' }),
+
+  // Extra Briefs (ExtraBriefs)
+  getExtraBriefs: () => request('/extra-briefs'),
+  createExtraBrief: (data) => request('/extra-briefs', { method: 'POST', body: JSON.stringify(data) }),
+  updateExtraBrief: (id, data) => request(`/extra-briefs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExtraBrief: (id) => request(`/extra-briefs/${id}`, { method: 'DELETE' }),
+
+  // Documents (Documents)
+  getDocuments: (params = {}) => {
+    const q = new URLSearchParams(params).toString()
+    return request(`/documents${q ? `?${q}` : ''}`)
+  },
+  createDocument: (data) => request('/documents', { method: 'POST', body: JSON.stringify(data) }),
+  deleteDocument: (id) => request(`/documents/${id}`, { method: 'DELETE' }),
 }
