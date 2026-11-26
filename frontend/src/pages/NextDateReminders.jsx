@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   CalendarClock, Calendar, MessageSquare, Send, CheckCircle2,
@@ -7,6 +7,7 @@ import {
   Plus, Edit3, X, Save, RotateCcw, Scale, FileText, ChevronDown
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getCases, getClients, saveCase, updateCase,
@@ -22,6 +23,8 @@ export default function NextDateReminders() {
   const [reminders, setReminders] = useState(() => getReminders())
   const [activeFilter, setActiveFilter] = useState('all') // 'today' | 'upcoming' | 'overdue' | 'all'
   const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
   const [toast, setToast] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
 
@@ -124,6 +127,10 @@ export default function NextDateReminders() {
       (c.psCaseNumber && c.psCaseNumber.toLowerCase().includes(q))
     )
   })
+
+  const paginatedCases = useMemo(() => {
+    return filteredCases.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  }, [filteredCases, currentPage, pageSize])
 
   // Format WhatsApp Message
   const buildReminderMessage = (cs) => {
@@ -547,7 +554,10 @@ export default function NextDateReminders() {
                 type="text"
                 placeholder="Search by client name, mobile number, case no, court, PP Name, or hearing reason..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="form-input"
                 style={{ paddingLeft: '32px' }}
               />
@@ -731,7 +741,7 @@ export default function NextDateReminders() {
                       </td>
                     </tr>
                   ) : (
-                    filteredCases.map((cs) => {
+                    paginatedCases.map((cs) => {
                       const isToday = cs.nextDate === todayStr
                       const isPast = cs.nextDate && cs.nextDate < todayStr
                       return (
@@ -810,6 +820,17 @@ export default function NextDateReminders() {
                 </tbody>
               </table>
             </div>
+
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredCases.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(sz) => {
+                setPageSize(sz)
+                setCurrentPage(1)
+              }}
+            />
           </div>
 
           {/* ---------------- Section 5: REMINDER ACTION SECTION (Persistent, Auto-Scroll, Editable Court/PP/OtherCase) ---------------- */}

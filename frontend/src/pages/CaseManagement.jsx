@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Briefcase, FolderPlus, Save, RefreshCw, Printer, XCircle, Search,
@@ -7,6 +7,7 @@ import {
   Download, Upload, FileSpreadsheet, MapPin, Scale, Check, Layers
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getClients, getCases, saveCase, updateCase, deleteCase, saveBulkCases,
@@ -23,6 +24,8 @@ export default function CaseManagement() {
   const [cases, setCases] = useState(() => getCases())
   const [selectedCaseId, setSelectedCaseId] = useState(null)
   const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
   const [clientSearchQuery, setClientSearchQuery] = useState('')
   const [showClientDropdown, setShowClientDropdown] = useState(false)
   const [toast, setToast] = useState(null)
@@ -536,6 +539,10 @@ export default function CaseManagement() {
 
   const selectedCase = cases.find((c) => c.id === selectedCaseId)
 
+  const paginatedCases = useMemo(() => {
+    return filteredCases.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  }, [filteredCases, currentPage, pageSize])
+
   return (
     <div className="app-shell">
       <div className="app-main">
@@ -879,11 +886,14 @@ export default function CaseManagement() {
                   type="text"
                   placeholder="Search by case no, client name, court, versus, U/S, purpose, rack..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value)
+                    setCurrentPage(1)
+                  }}
                   className="table-search-input"
                 />
                 {search && (
-                  <button className="clear-search-btn" onClick={() => setSearch('')}>
+                  <button className="clear-search-btn" onClick={() => { setSearch(''); setCurrentPage(1); }}>
                     ×
                   </button>
                 )}
@@ -913,7 +923,7 @@ export default function CaseManagement() {
                         </td>
                       </tr>
                     ) : (
-                      filteredCases.map((cs) => {
+                      paginatedCases.map((cs) => {
                         const isSelected = cs.id === selectedCaseId
                         return (
                           <tr
@@ -986,6 +996,18 @@ export default function CaseManagement() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredCases.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize)
+                  setCurrentPage(1)
+                }}
+              />
             </div>
           </div>
 

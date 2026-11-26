@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertTriangle, Search, Printer, Download, CreditCard, ArrowLeft,
@@ -6,6 +6,7 @@ import {
   Building2, Hash, ArrowUpRight, Trash2
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getDueList, getPaymentsByCaseId, savePayment, clearCaseDue, onStorageUpdate
@@ -18,6 +19,8 @@ export default function DueList() {
   const [dueCases, setDueCases] = useState(() => getDueList())
   const [search, setSearch] = useState('')
   const [courtFilter, setCourtFilter] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
   const [payModalCase, setPayModalCase] = useState(null)
   const [payAmount, setPayAmount] = useState('')
   const [payMode, setPayMode] = useState('Cash')
@@ -66,6 +69,10 @@ export default function DueList() {
     const matchesCourt = !courtFilter || c.courtName === courtFilter
     return matchesSearch && matchesCourt
   })
+
+  const paginatedDueCases = useMemo(() => {
+    return filteredDueCases.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  }, [filteredDueCases, currentPage, pageSize])
 
   // Quick Payment Handling
   const handleOpenPayModal = (cs) => {
@@ -234,7 +241,10 @@ export default function DueList() {
                 type="text"
                 placeholder="Search by client name, case no, ID no, or phone..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="form-input"
                 style={{ paddingLeft: '32px' }}
               />
@@ -244,7 +254,10 @@ export default function DueList() {
               <select
                 className="form-input form-select"
                 value={courtFilter}
-                onChange={(e) => setCourtFilter(e.target.value)}
+                onChange={(e) => {
+                  setCourtFilter(e.target.value)
+                  setCurrentPage(1)
+                }}
               >
                 <option value="">All Courts</option>
                 {courts.map((ct) => (
@@ -259,6 +272,7 @@ export default function DueList() {
                 onClick={() => {
                   setSearch('')
                   setCourtFilter('')
+                  setCurrentPage(1)
                 }}
               >
                 Clear Filters
@@ -300,7 +314,7 @@ export default function DueList() {
                       </td>
                     </tr>
                   ) : (
-                    filteredDueCases.map((cs) => (
+                    paginatedDueCases.map((cs) => (
                       <tr key={cs.id}>
                         <td>
                           <span className="id-pill case-id">{cs.id}</span>
@@ -367,6 +381,17 @@ export default function DueList() {
                 </tbody>
               </table>
             </div>
+
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredDueCases.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(sz) => {
+                setPageSize(sz)
+                setCurrentPage(1)
+              }}
+            />
           </div>
 
           {/* Quick Collect Payment Modal */}

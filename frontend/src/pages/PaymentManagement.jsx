@@ -7,6 +7,7 @@ import {
   Receipt, Plus, Eye, Check, X
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getCases, getClients, getPayments, savePayment, updatePayment, deletePayment,
@@ -30,6 +31,10 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   const [toast, setToast] = useState(null)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
+  const [billPage, setBillPage] = useState(1)
+  const [billPageSize, setBillPageSize] = useState(50)
+  const [paymentPage, setPaymentPage] = useState(1)
+  const [paymentPageSize, setPaymentPageSize] = useState(50)
 
   // Modals
   const [showBillModal, setShowBillModal] = useState(false)
@@ -536,6 +541,14 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
     })
   }, [payments, search, selectedPaymentClientFilter])
 
+  const paginatedBills = useMemo(() => {
+    return filteredBills.slice((billPage - 1) * billPageSize, billPage * billPageSize)
+  }, [filteredBills, billPage, billPageSize])
+
+  const paginatedPayments = useMemo(() => {
+    return filteredPayments.slice((paymentPage - 1) * paymentPageSize, paymentPage * paymentPageSize)
+  }, [filteredPayments, paymentPage, paymentPageSize])
+
   // Date-wise payments for Date-Wise Tab
   const dateWisePayments = payments.filter((p) => String(p.paymentDate) === selectedDate)
   const totalDateWiseAmt = dateWisePayments.reduce((acc, p) => acc + Number(p.amount || 0), 0)
@@ -946,7 +959,10 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                       type="text"
                       placeholder="Search bill no, client, case..."
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => {
+                        setSearch(e.target.value)
+                        setBillPage(1)
+                      }}
                       className="form-input"
                       style={{ paddingLeft: '28px', fontSize: '12px', height: '32px' }}
                     />
@@ -978,7 +994,7 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                           </td>
                         </tr>
                       ) : (
-                        filteredBills.map((b) => {
+                        paginatedBills.map((b) => {
                           const billTotal = Number(b.totalBillAmount || b.totalAmount || b.amount || 0)
                           const billPaid = Number(b.paidAmount || 0)
                           const billDue = Math.max(0, billTotal - billPaid)
@@ -1063,6 +1079,17 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                     </tbody>
                   </table>
                 </div>
+
+                <Pagination
+                  currentPage={billPage}
+                  totalItems={filteredBills.length}
+                  pageSize={billPageSize}
+                  onPageChange={setBillPage}
+                  onPageSizeChange={(sz) => {
+                    setBillPageSize(sz)
+                    setBillPage(1)
+                  }}
+                />
 
                 <div className="table-foot-hint" style={{ marginTop: '8px' }}>
                   <span className="hint-highlight">Tip:</span>
@@ -1373,7 +1400,10 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                       type="text"
                       placeholder="Search receipt no, client, mode..."
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => {
+                        setSearch(e.target.value)
+                        setPaymentPage(1)
+                      }}
                       className="form-input"
                       style={{ paddingLeft: '28px', fontSize: '12px', height: '32px' }}
                     />
@@ -1404,7 +1434,7 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                           </td>
                         </tr>
                       ) : (
-                        filteredPayments.map((p) => (
+                        paginatedPayments.map((p) => (
                           <tr
                             key={p.id}
                             className={`table-row-clickable ${selectedPaymentId === p.id ? 'row-selected' : ''}`}
@@ -1470,6 +1500,17 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                     </tbody>
                   </table>
                 </div>
+
+                <Pagination
+                  currentPage={paymentPage}
+                  totalItems={filteredPayments.length}
+                  pageSize={paymentPageSize}
+                  onPageChange={setPaymentPage}
+                  onPageSizeChange={(sz) => {
+                    setPaymentPageSize(sz)
+                    setPaymentPage(1)
+                  }}
+                />
 
                 <div className="table-foot-hint" style={{ marginTop: '8px' }}>
                   <span className="hint-highlight">Tip:</span>

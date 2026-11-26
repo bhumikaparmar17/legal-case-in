@@ -368,28 +368,13 @@ export function getClientHistory(clientId) {
 // -------------------------------------------------------------
 export function getCases() {
   const cases = readStorage(CASES_KEY, SEED_CASES)
-  const clients = readStorage(CLIENTS_KEY, SEED_CLIENTS)
-  // Ensure every case has its authentic Client ID CL-... mapped
-  return cases.map((cs) => {
-    let cid = cs.clientId
-    if (!cid || cid.startsWith('CS-')) {
-      const matched = clients.find(
-        (c) =>
-          (cs.clientName && c.name && c.name.toLowerCase() === cs.clientName.toLowerCase()) ||
-          (cs.phone && c.phone && c.phone === cs.phone)
-      )
-      if (matched) {
-        cid = matched.id
-      }
-    }
-    return {
-      ...cs,
-      clientId: cid || cs.clientId || 'CL-1001',
-      // backward compatibility for Reck vs Reg
-      regNumber: cs.regNumber || cs.reck || '',
-      reck: cs.reck || cs.regNumber || '',
-    }
-  })
+  if (!cases || !Array.isArray(cases)) return []
+  return cases.map((cs) => ({
+    ...cs,
+    clientId: cs.clientId || 'CL-1001',
+    regNumber: cs.regNumber || cs.reck || '',
+    reck: cs.reck || cs.regNumber || '',
+  }))
 }
 
 export function getCaseById(id) {
@@ -658,54 +643,9 @@ export function deletePayment(id) {
 // -------------------------------------------------------------
 export function getBills() {
   let bills = readStorage(BILLS_KEY, null)
-  if (!bills || !Array.isArray(bills) || bills.length === 0) {
-    bills = [...SEED_BILLS]
-    writeStorage(BILLS_KEY, bills)
+  if (!bills || !Array.isArray(bills)) {
+    return []
   }
-
-  // Auto-reconciliation: ensure cases have opening bills
-  const cases = getCases()
-  let hasNew = false
-  cases.forEach((cs) => {
-    const existing = bills.find((b) => b.caseId === cs.id)
-    if (!existing && Number(cs.totalFees || 0) > 0) {
-      let maxNum = 1000
-      bills.forEach((b) => {
-        const m = String(b.id || b.billNumber).match(/\d+/)
-        if (m) {
-          const num = parseInt(m[0], 10)
-          if (num > maxNum) maxNum = num
-        }
-      })
-      const newBill = {
-        id: `BL-${maxNum + 1}`,
-        billNumber: `BILL-${maxNum + 1}`,
-        caseId: cs.id,
-        clientId: cs.clientId,
-        clientName: cs.clientName,
-        phone: cs.phone || '',
-        caseNumber: cs.caseNumber || '',
-        courtName: cs.courtName || '',
-        billDate: cs.createdAt ? cs.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
-        description: `Contract bill for ${cs.caseNumber || 'case representation'}`,
-        contractAmount: Number(cs.totalFees || 0),
-        additionalCharges: 0,
-        discount: 0,
-        totalAmount: Number(cs.totalFees || 0),
-        paidAmount: Number(cs.paidAmount || 0),
-        dueAmount: Math.max(0, Number(cs.totalFees || 0) - Number(cs.paidAmount || 0)),
-        remarks: cs.notes || '',
-        createdAt: cs.createdAt || new Date().toISOString(),
-      }
-      bills.push(newBill)
-      hasNew = true
-    }
-  })
-
-  if (hasNew) {
-    writeStorage(BILLS_KEY, bills)
-  }
-
   return bills
 }
 
@@ -1626,8 +1566,8 @@ export async function initStorageSync() {
         }
       }
 
-      safeWrite(CLIENTS_KEY, res.data.clients || [])
-      safeWrite(CASES_KEY, res.data.cases || [])
+      safeWrite(CLIENTS_KEY, (res.data.clients || []).slice(0, 200))
+      safeWrite(CASES_KEY, (res.data.cases || []).slice(0, 200))
       safeWrite(EXPENSE_HEADS_KEY, res.data.expenseHeads || [])
       safeWrite(WAITING_LIST_KEY, res.data.waitingList || [])
       safeWrite(ANNOUNCEMENTS_KEY, res.data.announcements || [])

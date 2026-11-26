@@ -813,16 +813,18 @@ router.get('/sync', async (req, res) => {
         FROM CaseNext cn
         LEFT JOIN CaseMaster c ON cn.CaseId = c.ID
         LEFT JOIN ClientMaster cl ON c.ClientId = cl.ID
-        ORDER BY cn.NextDate ASC
+        ORDER BY cn.ID DESC
+        LIMIT 300
       `),
-      query('SELECT b.*, cl.ClientName FROM Billing b LEFT JOIN ClientMaster cl ON b.ClientId = cl.ID ORDER BY b.ID DESC'),
-      query('SELECT p.*, cl.ClientName FROM Payment p LEFT JOIN ClientMaster cl ON p.ClientId = cl.ID ORDER BY p.ID DESC'),
+      query('SELECT b.*, cl.ClientName FROM Billing b LEFT JOIN ClientMaster cl ON b.ClientId = cl.ID ORDER BY b.ID DESC LIMIT 300'),
+      query('SELECT p.*, cl.ClientName FROM Payment p LEFT JOIN ClientMaster cl ON p.ClientId = cl.ID ORDER BY p.ID DESC LIMIT 300'),
       query('SELECT * FROM ExpenseHeadMaster ORDER BY ExpenseHead ASC'),
       query(`
         SELECT e.*, ehm.ExpenseHead as HeadName
         FROM Expense e
         LEFT JOIN ExpenseHeadMaster ehm ON e.ExpenseId = ehm.ID
         ORDER BY e.ID DESC
+        LIMIT 300
       `),
       query('SELECT * FROM WaitingList ORDER BY ID ASC'),
       query('SELECT * FROM Announcements WHERE IsActive = 1 ORDER BY Priority DESC, ID DESC')

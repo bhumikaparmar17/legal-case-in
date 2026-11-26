@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, UserPlus, Save, RefreshCw, Printer, XCircle, Search,
@@ -7,6 +7,7 @@ import {
   ShieldAlert, Plus
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getClients, saveClient, updateClient, deleteClient,
@@ -20,6 +21,8 @@ export default function ClientManagement() {
   const [clients, setClients] = useState(() => getClients())
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
   const [formClientSearch, setFormClientSearch] = useState('')
   const [showClientDropdown, setShowClientDropdown] = useState(false)
   const [toast, setToast] = useState(null)
@@ -403,6 +406,10 @@ export default function ClientManagement() {
   })
 
   const selectedClient = clients.find((c) => c.id === selectedId) || null
+
+  const paginatedClients = useMemo(() => {
+    return filteredClients.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  }, [filteredClients, currentPage, pageSize])
 
   return (
     <div className="app-shell">
@@ -942,11 +949,14 @@ export default function ClientManagement() {
                   type="text"
                   placeholder="Search by client ID, name, mobile, extra phone, category or address..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value)
+                    setCurrentPage(1)
+                  }}
                   className="table-search-input"
                 />
                 {search && (
-                  <button className="clear-search-btn" onClick={() => setSearch('')}>
+                  <button className="clear-search-btn" onClick={() => { setSearch(''); setCurrentPage(1); }}>
                     ×
                   </button>
                 )}
@@ -974,7 +984,7 @@ export default function ClientManagement() {
                         </td>
                       </tr>
                     ) : (
-                      filteredClients.map((client) => {
+                      paginatedClients.map((client) => {
                         const isSelected = client.id === selectedId
                         return (
                           <tr
@@ -1046,6 +1056,18 @@ export default function ClientManagement() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredClients.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize)
+                  setCurrentPage(1)
+                }}
+              />
 
               {/* Table Footer Instructions */}
               <div className="table-foot-hint">

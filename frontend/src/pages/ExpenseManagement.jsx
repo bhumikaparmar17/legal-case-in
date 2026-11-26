@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   TrendingDown, Tags, Save, RefreshCw, Printer, XCircle, Search,
@@ -6,6 +6,7 @@ import {
   IndianRupee, Trash2, Plus, Edit3, ShieldAlert, Download, Layers
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getExpenseHeads, saveExpenseHead, updateExpenseHead, deleteExpenseHead,
@@ -25,6 +26,8 @@ export default function ExpenseManagement({ initialTab = 'expenses' }) {
   const [headFilter, setHeadFilter] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [expensePage, setExpensePage] = useState(1)
+  const [expensePageSize, setExpensePageSize] = useState(50)
 
   // Expense Form State
   const initialExpenseForm = {
@@ -238,6 +241,10 @@ export default function ExpenseManagement({ initialTab = 'expenses' }) {
     const matchesDateTo = !dateTo || ex.expenseDate <= dateTo
     return matchesSearch && matchesHead && matchesDateFrom && matchesDateTo
   })
+
+  const paginatedExpenses = useMemo(() => {
+    return filteredExpenses.slice((expensePage - 1) * expensePageSize, expensePage * expensePageSize)
+  }, [filteredExpenses, expensePage, expensePageSize])
 
   const totalFilteredExpense = filteredExpenses.reduce((acc, e) => acc + Number(e.amount || 0), 0)
   const headWiseSummary = getExpenseHeadWiseSummary()
@@ -509,7 +516,10 @@ export default function ExpenseManagement({ initialTab = 'expenses' }) {
                       type="text"
                       placeholder="Search description, paid to, voucher..."
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => {
+                        setSearch(e.target.value)
+                        setExpensePage(1)
+                      }}
                       className="form-input"
                       style={{ fontSize: '12px' }}
                     />
@@ -519,7 +529,10 @@ export default function ExpenseManagement({ initialTab = 'expenses' }) {
                       className="form-input form-select"
                       style={{ fontSize: '12px' }}
                       value={headFilter}
-                      onChange={(e) => setHeadFilter(e.target.value)}
+                      onChange={(e) => {
+                        setHeadFilter(e.target.value)
+                        setExpensePage(1)
+                      }}
                     >
                       <option value="">All Expense Heads</option>
                       {heads.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
@@ -549,7 +562,7 @@ export default function ExpenseManagement({ initialTab = 'expenses' }) {
                           </td>
                         </tr>
                       ) : (
-                        filteredExpenses.map((ex) => {
+                        paginatedExpenses.map((ex) => {
                           const isSelected = ex.id === selectedExpenseId
                           return (
                             <tr
@@ -634,6 +647,17 @@ export default function ExpenseManagement({ initialTab = 'expenses' }) {
                     </tbody>
                   </table>
                 </div>
+
+                <Pagination
+                  currentPage={expensePage}
+                  totalItems={filteredExpenses.length}
+                  pageSize={expensePageSize}
+                  onPageChange={setExpensePage}
+                  onPageSizeChange={(sz) => {
+                    setExpensePageSize(sz)
+                    setExpensePage(1)
+                  }}
+                />
               </div>
             </div>
           )}
