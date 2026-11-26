@@ -361,6 +361,26 @@ router.post('/reminders', async (req, res) => {
   }
 })
 
+router.put('/reminders/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { caseId, date, nextDate, hearingDate, purpose, stage, courtName, ppName, otherAc, notes } = req.body
+    const dateVal = nextDate || hearingDate || date || ''
+    const forVal = stage || purpose || req.body.for || ''
+    const notesVal = notes || otherAc || ''
+    const parsedCaseId = caseId ? parseInt(String(caseId).replace(/\D/g, ''), 10) || null : null
+
+    await query(
+      'UPDATE CaseNext SET CaseId = COALESCE(?, CaseId), NextDate = ?, `For` = ?, CourtName = ?, PPName = ?, OtherAc = ? WHERE ID = ?',
+      [parsedCaseId, dateVal, forVal, courtName || '', ppName || '', notesVal, id]
+    )
+    res.json({ success: true, id, caseId, nextDate: dateVal, for: forVal, courtName, ppName, notes: notesVal })
+  } catch (err) {
+    console.error('Error updating reminder:', err)
+    res.status(500).json({ error: 'Failed to update reminder' })
+  }
+})
+
 router.delete('/reminders/:id', async (req, res) => {
   try {
     const { id } = req.params
@@ -437,6 +457,26 @@ router.post('/bills', async (req, res) => {
   }
 })
 
+router.put('/bills/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { clientId, date, billingDate, amount, totalAmount, particulars, details } = req.body
+    const parsedClientId = clientId ? parseInt(String(clientId).replace(/\D/g, ''), 10) || null : null
+    const dateVal = billingDate || date || new Date().toISOString().split('T')[0]
+    const amountVal = Number(amount || totalAmount || 0)
+    const detailsVal = particulars || details || ''
+
+    await query(
+      'UPDATE Billing SET ClientId = COALESCE(?, ClientId), BillingDate = ?, Amount = ?, Details = ? WHERE ID = ?',
+      [parsedClientId, dateVal, amountVal, detailsVal, id]
+    )
+    res.json({ id, clientId: parsedClientId ? String(parsedClientId) : '', date: dateVal, billingDate: dateVal, amount: amountVal, totalAmount: amountVal, particulars: detailsVal, details: detailsVal })
+  } catch (err) {
+    console.error('Error updating bill:', err)
+    res.status(500).json({ error: 'Failed to update bill' })
+  }
+})
+
 router.delete('/bills/:id', async (req, res) => {
   try {
     const { id } = req.params
@@ -510,6 +550,26 @@ router.post('/payments', async (req, res) => {
   }
 })
 
+router.put('/payments/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { clientId, date, paymentDate, amount, paidAmount, remarks, details } = req.body
+    const parsedClientId = clientId ? parseInt(String(clientId).replace(/\D/g, ''), 10) || null : null
+    const dateVal = paymentDate || date || new Date().toISOString().split('T')[0]
+    const amountVal = Number(amount || paidAmount || 0)
+    const detailsVal = remarks || details || ''
+
+    await query(
+      'UPDATE Payment SET ClientId = COALESCE(?, ClientId), PaymentDate = ?, Amount = ?, Details = ? WHERE ID = ?',
+      [parsedClientId, dateVal, amountVal, detailsVal, id]
+    )
+    res.json({ id, clientId: parsedClientId ? String(parsedClientId) : '', date: dateVal, paymentDate: dateVal, amount: amountVal, paidAmount: amountVal, remarks: detailsVal, details: detailsVal })
+  } catch (err) {
+    console.error('Error updating payment:', err)
+    res.status(500).json({ error: 'Failed to update payment' })
+  }
+})
+
 router.delete('/payments/:id', async (req, res) => {
   try {
     const { id } = req.params
@@ -555,6 +615,33 @@ router.post('/expense-heads', async (req, res) => {
   } catch (err) {
     console.error('Error saving expense head:', err)
     res.status(500).json({ error: 'Failed to save expense head' })
+  }
+})
+
+router.put('/expense-heads/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, expenseHead } = req.body
+    const headName = (name || expenseHead || '').trim()
+    if (!headName) {
+      return res.status(400).json({ error: 'Expense head name is required' })
+    }
+    await query('UPDATE ExpenseHeadMaster SET ExpenseHead = ? WHERE ID = ?', [headName, id])
+    res.json({ id, name: headName, expenseHead: headName })
+  } catch (err) {
+    console.error('Error updating expense head:', err)
+    res.status(500).json({ error: 'Failed to update expense head' })
+  }
+})
+
+router.delete('/expense-heads/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    await query('DELETE FROM ExpenseHeadMaster WHERE ID = ?', [id])
+    res.json({ success: true, id })
+  } catch (err) {
+    console.error('Error deleting expense head:', err)
+    res.status(500).json({ error: 'Failed to delete expense head' })
   }
 })
 
@@ -610,6 +697,36 @@ router.post('/expenses', async (req, res) => {
   } catch (err) {
     console.error('Error saving expense:', err)
     res.status(500).json({ error: 'Failed to save expense' })
+  }
+})
+
+router.put('/expenses/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { headId, expenseId, paidTo, date, expenseDate, amount, remarks, details } = req.body
+    const parsedHeadId = (headId || expenseId) ? parseInt(String(headId || expenseId).replace(/\D/g, ''), 10) || null : null
+    const dateVal = expenseDate || date || new Date().toISOString().split('T')[0]
+    const amountVal = Number(amount || 0)
+    const detailsVal = remarks || details || ''
+
+    await query(
+      'UPDATE Expense SET ExpenseId = COALESCE(?, ExpenseId), PaidTo = ?, ExpenseDate = ?, Amount = ?, Details = ? WHERE ID = ?',
+      [parsedHeadId, paidTo || '', dateVal, amountVal, detailsVal, id]
+    )
+    res.json({
+      id,
+      headId: parsedHeadId ? String(parsedHeadId) : '',
+      expenseId: parsedHeadId ? String(parsedHeadId) : '',
+      paidTo: paidTo || '',
+      date: dateVal,
+      expenseDate: dateVal,
+      amount: amountVal,
+      remarks: detailsVal,
+      details: detailsVal,
+    })
+  } catch (err) {
+    console.error('Error updating expense:', err)
+    res.status(500).json({ error: 'Failed to update expense' })
   }
 })
 
@@ -792,12 +909,302 @@ router.delete('/announcements/:id', async (req, res) => {
 })
 
 // =====================================================================
+// 8b. CONSULTANCY FEES APIS
+// =====================================================================
+router.get('/consultancy-fees', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM ConsultancyFees ORDER BY ID DESC')
+    const fees = rows.map((r) => ({
+      id: String(r.ID),
+      receiptNo: `CF-${r.ID}`,
+      clientName: r.ClientName || '',
+      phone: r.Phone || '',
+      consultationDate: r.ConsultationDate ? String(r.ConsultationDate).split(' ')[0] : '',
+      amount: Number(r.Amount || 0),
+      paymentMode: r.PaymentMode || 'Cash',
+      remarks: r.Remarks || '',
+      createdAt: r.created_at,
+    }))
+    res.json(fees)
+  } catch (err) {
+    console.error('Error fetching consultancy fees:', err)
+    res.status(500).json({ error: 'Failed to fetch consultancy fees' })
+  }
+})
+
+router.post('/consultancy-fees', async (req, res) => {
+  try {
+    const { clientName, phone, consultationDate, amount, paymentMode, remarks } = req.body
+    const dateVal = consultationDate || new Date().toISOString().split('T')[0]
+    const result = await query(
+      'INSERT INTO ConsultancyFees (ClientName, Phone, ConsultationDate, Amount, PaymentMode, Remarks) VALUES (?, ?, ?, ?, ?, ?)',
+      [clientName || '', phone || '', dateVal, Number(amount || 0), paymentMode || 'Cash', remarks || '']
+    )
+    res.status(201).json({
+      id: String(result.insertId),
+      receiptNo: `CF-${result.insertId}`,
+      clientName: clientName || '',
+      phone: phone || '',
+      consultationDate: dateVal,
+      amount: Number(amount || 0),
+      paymentMode: paymentMode || 'Cash',
+      remarks: remarks || '',
+    })
+  } catch (err) {
+    console.error('Error creating consultancy fee:', err)
+    res.status(500).json({ error: 'Failed to create consultancy fee' })
+  }
+})
+
+router.put('/consultancy-fees/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { clientName, phone, consultationDate, amount, paymentMode, remarks } = req.body
+    const dateVal = consultationDate || new Date().toISOString().split('T')[0]
+    await query(
+      'UPDATE ConsultancyFees SET ClientName = ?, Phone = ?, ConsultationDate = ?, Amount = ?, PaymentMode = ?, Remarks = ? WHERE ID = ?',
+      [clientName || '', phone || '', dateVal, Number(amount || 0), paymentMode || 'Cash', remarks || '', id]
+    )
+    res.json({
+      id,
+      receiptNo: `CF-${id}`,
+      clientName: clientName || '',
+      phone: phone || '',
+      consultationDate: dateVal,
+      amount: Number(amount || 0),
+      paymentMode: paymentMode || 'Cash',
+      remarks: remarks || '',
+    })
+  } catch (err) {
+    console.error('Error updating consultancy fee:', err)
+    res.status(500).json({ error: 'Failed to update consultancy fee' })
+  }
+})
+
+router.delete('/consultancy-fees/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    await query('DELETE FROM ConsultancyFees WHERE ID = ?', [id])
+    res.json({ success: true, id })
+  } catch (err) {
+    console.error('Error deleting consultancy fee:', err)
+    res.status(500).json({ error: 'Failed to delete consultancy fee' })
+  }
+})
+
+// =====================================================================
+// 8c. EXTRA BRIEFS APIS
+// =====================================================================
+router.get('/extra-briefs', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM ExtraBriefs ORDER BY ID DESC')
+    const briefs = rows.map((r) => ({
+      id: String(r.ID),
+      caseId: r.CaseId || '',
+      caseNo: r.CaseNo || '',
+      caseNumber: r.CaseNo || '',
+      clientName: r.ClientName || '',
+      phone: r.Phone || '',
+      courtName: r.CourtName || '',
+      advocateName: r.AdvocateName || '',
+      advocateLawClerk: r.AdvocateName || '',
+      date: r.BriefDate ? String(r.BriefDate).split(' ')[0] : '',
+      briefDate: r.BriefDate ? String(r.BriefDate).split(' ')[0] : '',
+      purpose: r.Purpose || '',
+      evidenceDetails: r.Purpose || '',
+      remarks: r.Notes || '',
+      notes: r.Notes || '',
+      status: r.Status || 'Pending',
+      createdAt: r.created_at,
+    }))
+    res.json(briefs)
+  } catch (err) {
+    console.error('Error fetching extra briefs:', err)
+    res.status(500).json({ error: 'Failed to fetch extra briefs' })
+  }
+})
+
+router.post('/extra-briefs', async (req, res) => {
+  try {
+    const { caseId, caseNo, caseNumber, clientName, phone, courtName, advocateName, advocateLawClerk, date, briefDate, purpose, evidenceDetails, notes, remarks, status } = req.body
+    const dateVal = briefDate || date || new Date().toISOString().split('T')[0]
+    const advVal = advocateName || advocateLawClerk || ''
+    const cNoVal = caseNo || caseNumber || ''
+    const purpVal = purpose || evidenceDetails || ''
+    const notesVal = notes || remarks || ''
+    const statusVal = status || 'Pending'
+
+    const result = await query(
+      'INSERT INTO ExtraBriefs (CaseId, CaseNo, ClientName, Phone, CourtName, AdvocateName, BriefDate, Purpose, Notes, Status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [caseId || '', cNoVal, clientName || '', phone || '', courtName || '', advVal, dateVal, purpVal, notesVal, statusVal]
+    )
+
+    res.status(201).json({
+      id: String(result.insertId),
+      caseId: caseId || '',
+      caseNo: cNoVal,
+      caseNumber: cNoVal,
+      clientName: clientName || '',
+      phone: phone || '',
+      courtName: courtName || '',
+      advocateName: advVal,
+      advocateLawClerk: advVal,
+      date: dateVal,
+      briefDate: dateVal,
+      purpose: purpVal,
+      evidenceDetails: purpVal,
+      notes: notesVal,
+      remarks: notesVal,
+      status: statusVal,
+    })
+  } catch (err) {
+    console.error('Error creating extra brief:', err)
+    res.status(500).json({ error: 'Failed to create extra brief' })
+  }
+})
+
+router.put('/extra-briefs/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { caseId, caseNo, caseNumber, clientName, phone, courtName, advocateName, advocateLawClerk, date, briefDate, purpose, evidenceDetails, notes, remarks, status } = req.body
+    const dateVal = briefDate || date || new Date().toISOString().split('T')[0]
+    const advVal = advocateName || advocateLawClerk || ''
+    const cNoVal = caseNo || caseNumber || ''
+    const purpVal = purpose || evidenceDetails || ''
+    const notesVal = notes || remarks || ''
+    const statusVal = status || 'Pending'
+
+    await query(
+      'UPDATE ExtraBriefs SET CaseId = ?, CaseNo = ?, ClientName = ?, Phone = ?, CourtName = ?, AdvocateName = ?, BriefDate = ?, Purpose = ?, Notes = ?, Status = ? WHERE ID = ?',
+      [caseId || '', cNoVal, clientName || '', phone || '', courtName || '', advVal, dateVal, purpVal, notesVal, statusVal, id]
+    )
+
+    res.json({
+      id,
+      caseId: caseId || '',
+      caseNo: cNoVal,
+      caseNumber: cNoVal,
+      clientName: clientName || '',
+      phone: phone || '',
+      courtName: courtName || '',
+      advocateName: advVal,
+      advocateLawClerk: advVal,
+      date: dateVal,
+      briefDate: dateVal,
+      purpose: purpVal,
+      evidenceDetails: purpVal,
+      notes: notesVal,
+      remarks: notesVal,
+      status: statusVal,
+    })
+  } catch (err) {
+    console.error('Error updating extra brief:', err)
+    res.status(500).json({ error: 'Failed to update extra brief' })
+  }
+})
+
+router.delete('/extra-briefs/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    await query('DELETE FROM ExtraBriefs WHERE ID = ?', [id])
+    res.json({ success: true, id })
+  } catch (err) {
+    console.error('Error deleting extra brief:', err)
+    res.status(500).json({ error: 'Failed to delete extra brief' })
+  }
+})
+
+// =====================================================================
+// 8d. DOCUMENTS APIS
+// =====================================================================
+router.get('/documents', async (req, res) => {
+  try {
+    const { associatedId, associatedType } = req.query
+    let sql = 'SELECT ID, AssociatedType, AssociatedId, Title, FileName, FileType, FileSize, Notes, UploadDate, created_at FROM Documents'
+    const params = []
+    if (associatedId) {
+      sql += ' WHERE AssociatedId = ?'
+      params.push(associatedId)
+    }
+    sql += ' ORDER BY ID DESC'
+    const rows = await query(sql, params)
+    const docs = rows.map((r) => ({
+      id: String(r.ID),
+      associatedType: r.AssociatedType,
+      entityType: r.AssociatedType,
+      associatedId: r.AssociatedId,
+      idNumber: r.AssociatedId,
+      title: r.Title,
+      docName: r.Title,
+      fileName: r.FileName || '',
+      fileType: r.FileType || '',
+      fileSize: r.FileSize || 0,
+      remarks: r.Notes || '',
+      uploadDate: r.UploadDate ? String(r.UploadDate).split(' ')[0] : '',
+      createdAt: r.created_at,
+    }))
+    res.json(docs)
+  } catch (err) {
+    console.error('Error fetching documents:', err)
+    res.status(500).json({ error: 'Failed to fetch documents' })
+  }
+})
+
+router.post('/documents', async (req, res) => {
+  try {
+    const { associatedType, entityType, associatedId, idNumber, title, docName, fileName, fileType, fileSize, fileData, notes, remarks, uploadDate } = req.body
+    const typeVal = associatedType || entityType || 'case'
+    const idVal = associatedId || idNumber || ''
+    const titleVal = title || docName || fileName || 'Document'
+    const dateVal = uploadDate ? String(uploadDate).split(' ')[0] : new Date().toISOString().split('T')[0]
+
+    const result = await query(
+      'INSERT INTO Documents (AssociatedType, AssociatedId, Title, FileName, FileType, FileSize, FileData, Notes, UploadDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [typeVal, idVal, titleVal, fileName || '', fileType || '', fileSize || 0, fileData || '', notes || remarks || '', dateVal]
+    )
+
+    res.status(201).json({
+      id: String(result.insertId),
+      associatedType: typeVal,
+      entityType: typeVal,
+      associatedId: idVal,
+      idNumber: idVal,
+      title: titleVal,
+      docName: titleVal,
+      fileName: fileName || '',
+      fileType: fileType || '',
+      fileSize: fileSize || 0,
+      remarks: notes || remarks || '',
+      uploadDate: dateVal,
+    })
+  } catch (err) {
+    console.error('Error saving document:', err)
+    res.status(500).json({ error: 'Failed to save document' })
+  }
+})
+
+router.delete('/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    await query('DELETE FROM Documents WHERE ID = ?', [id])
+    res.json({ success: true, id })
+  } catch (err) {
+    console.error('Error deleting document:', err)
+    res.status(500).json({ error: 'Failed to delete document' })
+  }
+})
+
+// =====================================================================
 // 9. COMPLETE SYSTEM DATA SYNC API
 // Returns full database snapshot in a single fast call for UI initialization
 // =====================================================================
 router.get('/sync', async (req, res) => {
   try {
-    const [clientsRaw, casesRaw, remindersRaw, billsRaw, paymentsRaw, headsRaw, expensesRaw, waitingRaw, announcementsRaw] = await Promise.all([
+    const [
+      clientsRaw, casesRaw, remindersRaw, billsRaw, paymentsRaw,
+      headsRaw, expensesRaw, waitingRaw, announcementsRaw,
+      consultancyRaw, briefsRaw, docsRaw
+    ] = await Promise.all([
       query('SELECT * FROM ClientMaster ORDER BY ID DESC'),
       query(`
         SELECT c.*, cl.ClientName, cl.PhoneNo as ClientPhone,
@@ -827,7 +1234,10 @@ router.get('/sync', async (req, res) => {
         LIMIT 300
       `),
       query('SELECT * FROM WaitingList ORDER BY ID ASC'),
-      query('SELECT * FROM Announcements WHERE IsActive = 1 ORDER BY Priority DESC, ID DESC')
+      query('SELECT * FROM Announcements WHERE IsActive = 1 ORDER BY Priority DESC, ID DESC'),
+      query('SELECT * FROM ConsultancyFees ORDER BY ID DESC LIMIT 300'),
+      query('SELECT * FROM ExtraBriefs ORDER BY ID DESC LIMIT 300'),
+      query('SELECT ID, AssociatedType, AssociatedId, Title, FileName, FileType, FileSize, Notes, UploadDate, created_at FROM Documents ORDER BY ID DESC LIMIT 300')
     ])
 
     const clients = clientsRaw.map((r) => ({
@@ -965,6 +1375,54 @@ router.get('/sync', async (req, res) => {
       isActive: Boolean(r.IsActive),
     }))
 
+    const consultancyFees = consultancyRaw.map((r) => ({
+      id: String(r.ID),
+      receiptNo: `CF-${r.ID}`,
+      clientName: r.ClientName || '',
+      phone: r.Phone || '',
+      consultationDate: r.ConsultationDate ? String(r.ConsultationDate).split(' ')[0] : '',
+      amount: Number(r.Amount || 0),
+      paymentMode: r.PaymentMode || 'Cash',
+      remarks: r.Remarks || '',
+      createdAt: r.created_at,
+    }))
+
+    const extraBriefs = briefsRaw.map((r) => ({
+      id: String(r.ID),
+      caseId: r.CaseId || '',
+      caseNo: r.CaseNo || '',
+      caseNumber: r.CaseNo || '',
+      clientName: r.ClientName || '',
+      phone: r.Phone || '',
+      courtName: r.CourtName || '',
+      advocateName: r.AdvocateName || '',
+      advocateLawClerk: r.AdvocateName || '',
+      date: r.BriefDate ? String(r.BriefDate).split(' ')[0] : '',
+      briefDate: r.BriefDate ? String(r.BriefDate).split(' ')[0] : '',
+      purpose: r.Purpose || '',
+      evidenceDetails: r.Purpose || '',
+      remarks: r.Notes || '',
+      notes: r.Notes || '',
+      status: r.Status || 'Pending',
+      createdAt: r.created_at,
+    }))
+
+    const documents = docsRaw.map((r) => ({
+      id: String(r.ID),
+      associatedType: r.AssociatedType,
+      entityType: r.AssociatedType,
+      associatedId: r.AssociatedId,
+      idNumber: r.AssociatedId,
+      title: r.Title,
+      docName: r.Title,
+      fileName: r.FileName || '',
+      fileType: r.FileType || '',
+      fileSize: r.FileSize || 0,
+      remarks: r.Notes || '',
+      uploadDate: r.UploadDate ? String(r.UploadDate).split(' ')[0] : '',
+      createdAt: r.created_at,
+    }))
+
     res.json({
       success: true,
       timestamp: new Date().toISOString(),
@@ -978,6 +1436,9 @@ router.get('/sync', async (req, res) => {
         expenses: expenses.length,
         waitingList: waitingList.length,
         announcements: announcements.length,
+        consultancyFees: consultancyFees.length,
+        extraBriefs: extraBriefs.length,
+        documents: documents.length,
       },
       data: {
         clients,
@@ -989,6 +1450,9 @@ router.get('/sync', async (req, res) => {
         expenses,
         waitingList,
         announcements,
+        consultancyFees,
+        extraBriefs,
+        documents,
       }
     })
   } catch (err) {
@@ -1008,6 +1472,7 @@ router.get('/overview', async (req, res) => {
     const [billingRow] = await query('SELECT COALESCE(SUM(Amount), 0) as totalBilling FROM Billing')
     const [paymentRow] = await query('SELECT COALESCE(SUM(Amount), 0) as totalPayment FROM Payment')
     const [expenseRow] = await query('SELECT COALESCE(SUM(Amount), 0) as totalExpense FROM Expense')
+    const [consultancyRow] = await query('SELECT COALESCE(SUM(Amount), 0) as totalConsultancyFees FROM ConsultancyFees')
 
     res.json({
       success: true,
@@ -1017,7 +1482,7 @@ router.get('/overview', async (req, res) => {
         totalBilling: Number(billingRow?.totalBilling || 0),
         totalPayment: Number(paymentRow?.totalPayment || 0),
         totalExpense: Number(expenseRow?.totalExpense || 0),
-        totalConsultancy: Number(clientRow?.totalConFees || 0),
+        totalConsultancy: Number(clientRow?.totalConFees || 0) + Number(consultancyRow?.totalConsultancyFees || 0),
       }
     })
   } catch (err) {

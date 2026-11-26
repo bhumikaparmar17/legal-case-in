@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
+import { api } from '../services/api.js'
 import {
   getConsultancyFees, saveConsultancyFee, updateConsultancyFee,
   deleteConsultancyFee, onStorageUpdate
@@ -37,6 +38,12 @@ export default function ConsultancyFees() {
   const [errors, setErrors] = useState({})
 
   useEffect(() => {
+    api.getConsultancyFees().then((res) => {
+      if (Array.isArray(res) && res.length > 0) {
+        setRecords(res)
+      }
+    }).catch(() => {})
+
     return onStorageUpdate(() => {
       setRecords(getConsultancyFees())
     })

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
+import { api } from '../services/api.js'
 import {
   getExtraBriefs, saveExtraBrief, updateExtraBrief, deleteExtraBrief,
   getClients, onStorageUpdate
@@ -40,6 +41,12 @@ export default function ExtraBriefAdvocate() {
   const [formData, setFormData] = useState(initialForm)
 
   useEffect(() => {
+    api.getExtraBriefs().then((res) => {
+      if (Array.isArray(res) && res.length > 0) {
+        setBriefs(res)
+      }
+    }).catch(() => {})
+
     return onStorageUpdate(() => {
       setBriefs(getExtraBriefs())
       setClients(getClients())

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
+import { api } from '../services/api.js'
 import {
   getClients, getCases, getDocuments, saveDocument,
   getDocumentById, deleteDocument, onStorageUpdate
@@ -40,6 +41,12 @@ export default function DocumentUploadSystem() {
   const [formErrors, setFormErrors] = useState({})
 
   useEffect(() => {
+    api.getDocuments().then((res) => {
+      if (Array.isArray(res) && res.length > 0) {
+        setDocuments(res)
+      }
+    }).catch(() => {})
+
     return onStorageUpdate(() => {
       setClients(getClients())
       setCases(getCases())

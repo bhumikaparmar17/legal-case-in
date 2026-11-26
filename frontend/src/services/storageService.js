@@ -614,6 +614,7 @@ export function updatePayment(id, paymentData) {
 
   payments[idx] = updatedPayment
   writeStorage(PAYMENTS_KEY, payments)
+  api.updatePayment(id, paymentData).catch((e) => console.warn('MySQL updatePayment sync:', e.message))
 
   if (updatedPayment.caseId) {
     recalculateCaseFinancials(updatedPayment.caseId)
@@ -743,6 +744,7 @@ export function updateBill(id, billData) {
   }
 
   writeStorage(BILLS_KEY, bills)
+  api.updateBill(id, bills[idx]).catch((e) => console.warn('MySQL updateBill sync:', e.message))
   return bills[idx]
 }
 
@@ -928,6 +930,7 @@ export function updateExpenseHead(id, headData) {
 
   heads[idx] = { ...heads[idx], ...headData, id }
   writeStorage(EXPENSE_HEADS_KEY, heads)
+  api.updateExpenseHead(id, headData).catch((e) => console.warn('MySQL updateExpenseHead sync:', e.message))
   return heads[idx]
 }
 
@@ -941,6 +944,7 @@ export function deleteExpenseHead(id) {
   const heads = getExpenseHeads()
   const filtered = heads.filter((h) => String(h.id).toLowerCase() !== String(id).toLowerCase())
   writeStorage(EXPENSE_HEADS_KEY, filtered)
+  api.deleteExpenseHead(id).catch((e) => console.warn('MySQL deleteExpenseHead sync:', e.message))
   return true
 }
 
@@ -996,6 +1000,7 @@ export function updateExpense(id, expenseData) {
     updatedAt: new Date().toISOString(),
   }
   writeStorage(EXPENSES_KEY, expenses)
+  api.updateExpense(id, expenseData).catch((e) => console.warn('MySQL updateExpense sync:', e.message))
   return expenses[idx]
 }
 
@@ -1053,6 +1058,16 @@ export function saveConsultancyFee(feeData) {
 
   const updated = [newEntry, ...fees]
   writeStorage(CONSULTANCY_KEY, updated)
+  api.createConsultancyFee(feeData).then((res) => {
+    if (res && res.id) {
+      const current = getConsultancyFees()
+      const idx = current.findIndex((f) => f.id === newId)
+      if (idx !== -1) {
+        current[idx] = { ...current[idx], id: String(res.id), receiptNo: res.receiptNo || `CF-${res.id}` }
+        writeStorage(CONSULTANCY_KEY, current)
+      }
+    }
+  }).catch((e) => console.warn('MySQL saveConsultancyFee sync:', e.message))
   return newEntry
 }
 
@@ -1069,6 +1084,7 @@ export function updateConsultancyFee(id, feeData) {
     updatedAt: new Date().toISOString(),
   }
   writeStorage(CONSULTANCY_KEY, fees)
+  api.updateConsultancyFee(id, feeData).catch((e) => console.warn('MySQL updateConsultancyFee sync:', e.message))
   return fees[idx]
 }
 
@@ -1076,6 +1092,7 @@ export function deleteConsultancyFee(id) {
   const fees = getConsultancyFees()
   const filtered = fees.filter((f) => String(f.id).toLowerCase() !== String(id).toLowerCase())
   writeStorage(CONSULTANCY_KEY, filtered)
+  api.deleteConsultancyFee(id).catch((e) => console.warn('MySQL deleteConsultancyFee sync:', e.message))
   return true
 }
 
@@ -1132,6 +1149,7 @@ export async function saveDocument(docData) {
 
   const updated = [docRecord, ...docs]
   writeStorage(DOCUMENTS_META_KEY, updated)
+  api.createDocument(docData).catch((e) => console.warn('MySQL saveDocument sync:', e.message))
   return docRecord
 }
 
@@ -1149,6 +1167,7 @@ export async function deleteDocument(id) {
   const docs = getDocuments()
   const filtered = docs.filter((d) => String(d.id).toLowerCase() !== String(id).toLowerCase())
   writeStorage(DOCUMENTS_META_KEY, filtered)
+  api.deleteDocument(id).catch((e) => console.warn('MySQL deleteDocument sync:', e.message))
   return true
 }
 
@@ -1200,6 +1219,7 @@ export function updateReminder(id, reminderData) {
 
   reminders[idx] = { ...reminders[idx], ...reminderData, id, updatedAt: new Date().toISOString() }
   writeStorage(REMINDERS_KEY, reminders)
+  api.updateReminder(id, reminderData).catch((e) => console.warn('MySQL updateReminder sync:', e.message))
   return reminders[idx]
 }
 
@@ -1247,6 +1267,16 @@ export function saveExtraBrief(briefData) {
 
   const updated = [newBrief, ...briefs]
   writeStorage(EXTRA_BRIEFS_KEY, updated)
+  api.createExtraBrief(briefData).then((res) => {
+    if (res && res.id) {
+      const current = getExtraBriefs()
+      const idx = current.findIndex((b) => b.id === newId)
+      if (idx !== -1) {
+        current[idx] = { ...current[idx], id: String(res.id) }
+        writeStorage(EXTRA_BRIEFS_KEY, current)
+      }
+    }
+  }).catch((e) => console.warn('MySQL saveExtraBrief sync:', e.message))
   return newBrief
 }
 
@@ -1264,6 +1294,7 @@ export function updateExtraBrief(id, briefData) {
     updatedAt: new Date().toISOString(),
   }
   writeStorage(EXTRA_BRIEFS_KEY, briefs)
+  api.updateExtraBrief(id, briefData).catch((e) => console.warn('MySQL updateExtraBrief sync:', e.message))
   return briefs[idx]
 }
 
@@ -1271,6 +1302,7 @@ export function deleteExtraBrief(id) {
   const briefs = getExtraBriefs()
   const filtered = briefs.filter((b) => String(b.id).toLowerCase() !== String(id).toLowerCase())
   writeStorage(EXTRA_BRIEFS_KEY, filtered)
+  api.deleteExtraBrief(id).catch((e) => console.warn('MySQL deleteExtraBrief sync:', e.message))
   return true
 }
 
@@ -1556,6 +1588,9 @@ export async function initStorageSync() {
       memoryStore[EXPENSES_KEY] = res.data.expenses || []
       memoryStore[WAITING_LIST_KEY] = res.data.waitingList || []
       memoryStore[ANNOUNCEMENTS_KEY] = res.data.announcements || []
+      memoryStore[CONSULTANCY_KEY] = res.data.consultancyFees || []
+      memoryStore[EXTRA_BRIEFS_KEY] = res.data.extraBriefs || []
+      memoryStore[DOCUMENTS_META_KEY] = res.data.documents || []
 
       // Safely write to localStorage with quota protection
       const safeWrite = (k, v) => {
@@ -1571,6 +1606,9 @@ export async function initStorageSync() {
       safeWrite(EXPENSE_HEADS_KEY, res.data.expenseHeads || [])
       safeWrite(WAITING_LIST_KEY, res.data.waitingList || [])
       safeWrite(ANNOUNCEMENTS_KEY, res.data.announcements || [])
+      safeWrite(CONSULTANCY_KEY, res.data.consultancyFees || [])
+      safeWrite(EXTRA_BRIEFS_KEY, res.data.extraBriefs || [])
+      safeWrite(DOCUMENTS_META_KEY, res.data.documents || [])
       safeWrite(REMINDERS_KEY, (res.data.reminders || []).slice(0, 100))
       safeWrite(BILLS_KEY, (res.data.bills || []).slice(0, 100))
       safeWrite(PAYMENTS_KEY, (res.data.payments || []).slice(0, 100))
