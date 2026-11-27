@@ -5,7 +5,6 @@ import {
   AlertCircle, ArrowLeft, ChevronRight, Search, Plus, Trash2, Edit3, Zap, ShieldAlert,
   Megaphone, Flame, X, Volume2
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getWaitingList, saveWaitingListEntry, updateWaitingListEntry,
@@ -212,9 +211,7 @@ export default function WaitingList() {
   })
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -796,7 +793,6 @@ export default function WaitingList() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }

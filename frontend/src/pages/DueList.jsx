@@ -5,7 +5,6 @@ import {
   ChevronRight, Calendar, IndianRupee, Phone, CheckCircle2, User,
   Building2, Hash, ArrowUpRight, Trash2
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
@@ -152,9 +151,7 @@ export default function DueList() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -493,7 +490,6 @@ export default function DueList() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }

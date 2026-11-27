@@ -6,7 +6,6 @@ import {
   Hash, IndianRupee, FileText, Trash2, Filter, Layers, Download,
   Receipt, Plus, Eye, Check, X
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
@@ -877,9 +876,7 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   const totalDateWiseAmt = dateWisePayments.reduce((acc, p) => acc + Number(p.amount || 0), 0)
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -1991,7 +1988,6 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
             </div>
           )}
         </main>
-      </div>
 
       {/* ========================================================================= */}
       {/* MODAL 1: VIEW / PRINT BILL MODAL                                          */}
@@ -2191,6 +2187,6 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

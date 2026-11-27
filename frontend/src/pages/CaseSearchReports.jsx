@@ -4,7 +4,6 @@ import {
   Search, RotateCcw, Printer, Download, Eye, ArrowLeft,
   ChevronRight, Calendar, AlertCircle
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import { getCases, onStorageUpdate, getPaymentsByCaseId } from '../services/storageService.js'
 import './management.css'
@@ -100,9 +99,7 @@ export default function CaseSearchReports() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -457,7 +454,6 @@ export default function CaseSearchReports() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }

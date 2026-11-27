@@ -6,7 +6,6 @@ import {
   CreditCard, AlertTriangle, UploadCloud, BellRing, Tags, BadgeIndianRupee,
   Layers, Landmark, PanelLeftClose, PanelLeftOpen, Compass, Tv
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import StatCard from '../components/StatCard.jsx'
 import {
   STATS,
@@ -68,86 +67,7 @@ export default function Dashboard() {
   })
 
   return (
-    <div className="app-shell dashboard-page">
-      <Topbar />
-
-      <div className="dash-body-layout">
-        {/* Navigation Sidebar with visible menu labels and toggle */}
-        <aside className={`rail ${sidebarExpanded ? 'expanded' : 'collapsed'}`}>
-          <div className="rail-top">
-            <div className="rail-header">
-              <span className="rail-header-title">
-                <Compass size={14} />
-                <span>Menu Navigation</span>
-              </span>
-              <button
-                className="rail-toggle-btn"
-                onClick={() => setSidebarExpanded(!sidebarExpanded)}
-                title={sidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
-              >
-                {sidebarExpanded ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-              </button>
-            </div>
-
-            <nav className="rail-nav">
-              <button className="rail-btn active" onClick={() => navigate('/dashboard')} title="Dashboard">
-                <LayoutDashboard size={18} />
-                <span className="rail-label">Dashboard</span>
-                <span className="rail-tip">Dashboard</span>
-              </button>
-              <button className="rail-btn" onClick={() => go('/cases')} title="Case Management">
-                <Briefcase size={18} />
-                <span className="rail-label">Case Master</span>
-                <span className="rail-tip">Cases</span>
-              </button>
-              <button className="rail-btn" onClick={() => go('/clients')} title="Client Management">
-                <Scale size={18} />
-                <span className="rail-label">Client Master</span>
-                <span className="rail-tip">Clients</span>
-              </button>
-              <button className="rail-btn" onClick={() => go('/payments')} title="Payment & Accounts">
-                <CreditCard size={18} />
-                <span className="rail-label">Payments &amp; Bills</span>
-                <span className="rail-tip">Payments</span>
-              </button>
-              <button className="rail-btn" onClick={() => go('/due-list')} title="Outstanding Due List">
-                <AlertTriangle size={18} />
-                <span className="rail-label">Outstanding Dues</span>
-                <span className="rail-tip">Dues</span>
-              </button>
-              <button className="rail-btn" onClick={() => go('/reminders')} title="Hearing Schedule">
-                <BellRing size={18} />
-                <span className="rail-label">Hearing Reminders</span>
-                <span className="rail-tip">Hearings</span>
-              </button>
-              <button className="rail-btn" onClick={() => go('/expenses')} title="Expense Accounts">
-                <Receipt size={18} />
-                <span className="rail-label">Office Expenses</span>
-                <span className="rail-tip">Expenses</span>
-              </button>
-              <button className="rail-btn" onClick={() => go('/case-search')} title="Reports & Query">
-                <BarChart3 size={18} />
-                <span className="rail-label">Case Search &amp; Reports</span>
-                <span className="rail-tip">Search</span>
-              </button>
-              <button className="rail-btn" onClick={() => go('/tv-display')} title="Digital Queue & TV Display">
-                <Tv size={18} />
-                <span className="rail-label">Chamber TV Display</span>
-                <span className="rail-tip">TV Screen</span>
-              </button>
-            </nav>
-          </div>
-
-          <div className="rail-bottom">
-            <div className="rail-bottom-card">
-              <span className="pulse-dot" />
-              <span>Chamber Active</span>
-            </div>
-          </div>
-        </aside>
-
-        <div className="app-main">
-          <main className="dash">
+    <main className="dash">
           {/* Executive Dashboard Header */}
           <div className="dash-head">
             <div className="dash-head-text">
@@ -282,8 +202,5 @@ export default function Dashboard() {
             </div>
           </footer>
         </main>
-      </div>
-    </div>
-  </div>
-)
+      )
 }

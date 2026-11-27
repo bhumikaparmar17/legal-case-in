@@ -4,7 +4,6 @@ import {
   Layers, Search, Printer, Download, ArrowLeft, ChevronRight,
   Gavel, Calendar, Building2, User, Hash, AlertCircle
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import { getCases, onStorageUpdate } from '../services/storageService.js'
 import './management.css'
@@ -45,9 +44,7 @@ export default function ForWiseCaseReport() {
   })
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -210,7 +207,6 @@ export default function ForWiseCaseReport() {
             </div>
           </div>
         </main>
-      </div>
-    </div>
+      </>
   )
 }

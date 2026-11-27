@@ -5,7 +5,6 @@ import {
   Calendar, Phone, ArrowLeft, CheckCircle2, AlertCircle, ChevronRight,
   IndianRupee, Trash2, ShieldCheck, UserCheck
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getConsultancyFees, saveConsultancyFee, updateConsultancyFee,
@@ -172,9 +171,7 @@ export default function ConsultancyFees() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -609,7 +606,6 @@ export default function ConsultancyFees() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }

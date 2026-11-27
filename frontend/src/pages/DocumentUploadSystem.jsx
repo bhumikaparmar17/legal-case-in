@@ -5,7 +5,6 @@ import {
   Eye, Search, ArrowLeft, CheckCircle2, AlertCircle, ChevronRight,
   Filter, FileCheck, HardDrive, ShieldCheck, Plus, X
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getClients, getCases, getDocuments, saveDocument,
@@ -212,9 +211,7 @@ export default function DocumentUploadSystem() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -686,7 +683,6 @@ export default function DocumentUploadSystem() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }

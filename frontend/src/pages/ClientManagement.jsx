@@ -6,7 +6,6 @@ import {
   AlertCircle, ChevronRight, UserCheck, Trash2, Eye,
   ShieldAlert, Plus
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
@@ -427,9 +426,7 @@ export default function ClientManagement({ viewMode }) {
   }, [filteredClients, currentPage, pageSize])
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           {/* Breadcrumb Navigation */}
@@ -1417,7 +1414,6 @@ export default function ClientManagement({ viewMode }) {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }

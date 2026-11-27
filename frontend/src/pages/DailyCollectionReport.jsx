@@ -5,7 +5,6 @@ import {
   IndianRupee, CreditCard, BadgeIndianRupee, AlertCircle, FileSpreadsheet,
   CheckCircle2, Clock
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import { getDailyCollection, onStorageUpdate } from '../services/storageService.js'
 import './management.css'
@@ -53,9 +52,7 @@ export default function DailyCollectionReport() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -296,7 +293,6 @@ export default function DailyCollectionReport() {
             </div>
           </div>
         </main>
-      </div>
-    </div>
+      </>
   )
 }

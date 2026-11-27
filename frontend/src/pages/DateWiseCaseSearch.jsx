@@ -4,7 +4,6 @@ import {
   FileSpreadsheet, Calendar, Search, Printer, Download, ArrowLeft,
   ChevronRight, AlertCircle, LayoutGrid, List, RotateCcw, Filter
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import { getCases, getAppearances, onStorageUpdate } from '../services/storageService.js'
 import './management.css'
@@ -160,9 +159,7 @@ export default function DateWiseCaseSearch() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -550,7 +547,6 @@ export default function DateWiseCaseSearch() {
   )
 }
         </main >
-      </div >
-    </div >
+      </>
   )
 }

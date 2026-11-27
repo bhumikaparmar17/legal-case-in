@@ -5,7 +5,6 @@ import {
   Search, ArrowLeft, ChevronRight, CheckCircle2, AlertCircle,
   Building2, User, Hash, FileText, LayoutGrid, List, Calendar
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getExtraBriefs, saveExtraBrief, updateExtraBrief, deleteExtraBrief,
@@ -154,9 +153,7 @@ export default function ExtraBriefAdvocate() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -848,7 +845,6 @@ export default function ExtraBriefAdvocate() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }

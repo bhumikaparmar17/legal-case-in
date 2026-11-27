@@ -5,7 +5,6 @@ import {
   Calendar, ArrowLeft, CheckCircle2, AlertCircle, ChevronRight,
   IndianRupee, Trash2, Plus, Edit3, ShieldAlert, Download, Layers
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
@@ -272,9 +271,7 @@ export default function ExpenseManagement({ initialTab = 'expenses' }) {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -877,7 +874,6 @@ export default function ExpenseManagement({ initialTab = 'expenses' }) {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }

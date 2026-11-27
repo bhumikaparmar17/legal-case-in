@@ -4,7 +4,6 @@ import {
   ChartPie, ArrowLeft, ChevronRight, Printer, Download,
   RotateCcw, Search, AlertCircle, TrendingUp, TrendingDown, IndianRupee
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getPayments, getExpenses, getConsultancyFees, onStorageUpdate
@@ -166,9 +165,7 @@ export default function IncomeExpenseReport() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -581,7 +578,6 @@ export default function IncomeExpenseReport() {
             </span>
           </div>
         </main>
-      </div>
-    </div>
+      </>
   )
 }

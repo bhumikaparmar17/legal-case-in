@@ -1,6 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Construction, ChevronRight, Home } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { ALL_MODULES } from '../data/menu.js'
 
 // Fully Functional Module Components
@@ -133,9 +132,7 @@ export default function ModulePage() {
   const Icon = mod?.icon || Construction
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
         <main className="dash">
           <div className="crumbs">
             <button className="crumbs-link" onClick={() => navigate('/dashboard')}>
@@ -181,7 +178,6 @@ export default function ModulePage() {
             </button>
           </div>
         </main>
-      </div>
-    </div>
+      </>
   )
 }

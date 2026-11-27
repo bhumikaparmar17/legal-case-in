@@ -4,7 +4,6 @@ import {
   BookOpen, Printer, ArrowLeft, ChevronRight, Search, Download,
   RotateCcw, AlertCircle, User, Phone, CheckCircle2
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getClients, getCases, getPayments, getBills, onStorageUpdate
@@ -181,9 +180,7 @@ export default function ClientLedgerReport() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -610,7 +607,6 @@ export default function ClientLedgerReport() {
             </span>
           </div>
         </main>
-      </div>
-    </div>
+      </>
   )
 }

@@ -6,7 +6,6 @@ import {
   AlertCircle, ChevronRight, Hash, Phone, User, Trash2, Eye,
   Download, Upload, FileSpreadsheet, MapPin, Scale, Check, Layers
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
@@ -554,9 +553,7 @@ export default function CaseManagement() {
   }, [filteredCases, currentPage, pageSize])
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           {/* Breadcrumb Navigation */}
@@ -1462,7 +1459,6 @@ export default function CaseManagement() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }

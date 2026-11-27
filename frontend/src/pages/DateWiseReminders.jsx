@@ -5,7 +5,6 @@ import {
   Download, ArrowLeft, ChevronRight, Search, CheckCircle2, AlertCircle,
   MessageSquare, User, LayoutGrid, List
 } from 'lucide-react'
-import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
 import {
   getReminders, saveReminder, updateReminder, deleteReminder,
@@ -159,9 +158,7 @@ export default function DateWiseReminders() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <Topbar />
+    <>
 
         <main className="dash mgmt-page">
           <div className="crumbs">
@@ -577,7 +574,6 @@ export default function DateWiseReminders() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </>
   )
 }
