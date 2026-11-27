@@ -376,29 +376,50 @@ export default function CaseSearchReports() {
           {/* Case Detail Modal */}
           {viewCase && (
             <div className="mgmt-modal-overlay" onClick={() => setViewCase(null)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '700px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div className="mgmt-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '720px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  maxHeight: '88vh',
+                  overflowY: 'auto',
+                  background: '#ffffff'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mgmt-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '14px' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700' }}>
-                      Case Docket: {viewCase.caseNumber} ({viewCase.id})
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
+                      Case Docket: {viewCase.caseNumber || '—'} ({viewCase.id})
                     </h3>
-                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
-                      {viewCase.courtName} · Next Date: {viewCase.nextDate}
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>
+                      {viewCase.courtName || 'Court unassigned'} · Next Date: {viewCase.nextDate || 'Not set'}
                     </p>
                   </div>
-                  <button className="clear-search-btn" onClick={() => setViewCase(null)}>✕</button>
+                  <button
+                    type="button"
+                    className="clear-search-btn"
+                    onClick={() => setViewCase(null)}
+                    style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', margin: '14px 0', fontSize: '13px' }}>
-                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                    <div><b>Client:</b> {viewCase.clientName} ({viewCase.clientId})</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', margin: '14px 0', fontSize: '13px', lineHeight: '1.6' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div><b>Client:</b> {viewCase.clientName || 'Unassigned'} ({viewCase.clientId || '—'})</div>
                     <div><b>Contact:</b> {viewCase.phone || '—'}</div>
                     <div><b>Advocate:</b> {viewCase.advocateName || OFFICE.name}</div>
                     <div><b>Law Clerk (L/C):</b> {viewCase.lc || '—'}</div>
                     <div><b>Police Station:</b> {viewCase.policeStation || '—'}</div>
                     <div><b>P.S. Case No:</b> {viewCase.psCaseNumber || '—'}</div>
                   </div>
-                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     <div><b>Under Section:</b> {viewCase.underSection || '—'}</div>
                     <div><b>V.S. Name:</b> {viewCase.vsName || '—'}</div>
                     <div><b>ID Number:</b> {viewCase.idNumber || '—'}</div>
@@ -409,21 +430,21 @@ export default function CaseSearchReports() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', margin: '12px 0' }}>
-                  <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                    <small style={{ color: '#64748b', fontSize: '11px' }}>Total Agreed Fees</small>
-                    <div style={{ fontSize: '15px', fontWeight: '700' }}>₹{Number(viewCase.totalFees || 0).toLocaleString('en-IN')}</div>
+                  <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <small style={{ color: '#64748b', fontSize: '11px', display: 'block' }}>Total Agreed Fees</small>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>₹{Number(viewCase.totalFees || 0).toLocaleString('en-IN')}</div>
                   </div>
-                  <div style={{ background: '#f0fdf4', padding: '8px 12px', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
-                    <small style={{ color: '#166534', fontSize: '11px' }}>Total Paid</small>
+                  <div style={{ background: '#f0fdf4', padding: '10px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                    <small style={{ color: '#166534', fontSize: '11px', display: 'block' }}>Total Paid</small>
                     <div style={{ fontSize: '15px', fontWeight: '700', color: '#15803d' }}>₹{Number(viewCase.paidAmount || 0).toLocaleString('en-IN')}</div>
                   </div>
-                  <div style={{ background: '#fff1f2', padding: '8px 12px', borderRadius: '6px', border: '1px solid #fecaca' }}>
-                    <small style={{ color: '#991b1b', fontSize: '11px' }}>Outstanding Due</small>
+                  <div style={{ background: '#fff1f2', padding: '10px 12px', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                    <small style={{ color: '#991b1b', fontSize: '11px', display: 'block' }}>Outstanding Due</small>
                     <div style={{ fontSize: '15px', fontWeight: '700', color: '#b91c1c' }}>₹{Number(viewCase.dueAmount || 0).toLocaleString('en-IN')}</div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                   <button className="btn-secondary" onClick={() => setViewCase(null)}>Close</button>
                   <button className="btn-primary" onClick={() => {
                     setViewCase(null)

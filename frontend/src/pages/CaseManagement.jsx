@@ -19,6 +19,9 @@ import './management.css'
 export default function CaseManagement() {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
+  const formPanelRef = useRef(null)
+  const caseNoInputRef = useRef(null)
+  const [hoveredBtn, setHoveredBtn] = useState(null)
 
   const [clients, setClients] = useState(() => getClients())
   const [cases, setCases] = useState(() => getCases())
@@ -266,74 +269,81 @@ export default function CaseManagement() {
   }
 
   // =====================================================================
-  // BULK EXPORT TO CSV
+  // EXPORT CASES AS PDF TABLE (ONLY TABLE & DATA)
   // =====================================================================
-  const handleExportCSV = () => {
-    if (cases.length === 0) {
+  const handleExportPDF = () => {
+    const listToExport = filteredCases.length > 0 ? filteredCases : cases
+    if (listToExport.length === 0) {
       showToast('error', 'No cases to export. Database is empty.')
       return
     }
 
-    const headers = [
-      'Case ID',
-      'Case Number',
-      'Client ID',
-      'Client Name',
-      'Court Name',
-      'Versus Party',
-      'Under Section',
-      'Purpose / Stage',
-      'Next Hearing Date',
-      'PS Case Number',
-      'Start Date',
-      'Chamber Rack No',
-      'Chamber Room No',
-      'Public Prosecutor',
-      'Legal Counsel (LC)',
-      'Appearing Advocate',
-      'Case Details / Notes'
-    ]
+    const esc = (v) => String(v ?? '—')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
 
-    const escapeCsv = (val) => {
-      const str = String(val ?? '')
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
+    const rowsHtml = listToExport.map((cs) => `
+      <tr>
+        <td>${esc(cs.id)}</td>
+        <td><strong>${esc(cs.caseNumber || cs.caseNo)}</strong></td>
+        <td>${esc(cs.courtName)}</td>
+        <td>${esc(cs.clientName || 'Unassigned')}</td>
+        <td>${esc(cs.vsName || cs.versusName)}</td>
+        <td>${esc(cs.underSection || cs.us)}</td>
+        <td>${esc(cs.purpose || cs.caseFor || cs.for)}</td>
+        <td>${esc(cs.nextDate)}</td>
+        <td>${cs.rackNo || cs.roomNo ? `R:${esc(cs.rackNo || '-')} Rm:${esc(cs.roomNo || '-')}` : '—'}</td>
+      </tr>
+    `).join('')
+
+    const printWindow = window.open('', '_blank', 'width=1050,height=750')
+    if (!printWindow) {
+      showToast('error', 'Popup blocked. Please allow popups to export PDF.')
+      return
     }
 
-    const rows = cases.map((cs) => [
-      escapeCsv(cs.id),
-      escapeCsv(cs.caseNumber || cs.caseNo),
-      escapeCsv(cs.clientId),
-      escapeCsv(cs.clientName),
-      escapeCsv(cs.courtName),
-      escapeCsv(cs.vsName || cs.versusName),
-      escapeCsv(cs.underSection || cs.us),
-      escapeCsv(cs.purpose || cs.caseFor || cs.for),
-      escapeCsv(cs.nextDate),
-      escapeCsv(cs.psCaseNumber || cs.psCaseNo),
-      escapeCsv(cs.startDate),
-      escapeCsv(cs.rackNo),
-      escapeCsv(cs.roomNo),
-      escapeCsv(cs.ppName),
-      escapeCsv(cs.lc || cs.lcName),
-      escapeCsv(cs.advocateName || cs.adAdvName),
-      escapeCsv(cs.caseDetails || cs.notes)
-    ].join(','))
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `LegalCase_Cases_${new Date().toISOString().split('T')[0]}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-
-    showToast('success', `Exported ${cases.length} cases to CSV successfully!`)
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Case Master Export (${listToExport.length} Records)</title>
+          <style>
+            @page { size: landscape; margin: 10mm; }
+            body { font-family: Arial, sans-serif; margin: 0; padding: 10px; color: #0f172a; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+            th { background: #f1f5f9; font-weight: 700; text-transform: uppercase; font-size: 10px; }
+            tr:nth-child(even) td { background: #f8fafc; }
+          </style>
+        </head>
+        <body>
+          <table>
+            <thead>
+              <tr>
+                <th>Case ID</th>
+                <th>Case Number</th>
+                <th>Court Name</th>
+                <th>Client Name</th>
+                <th>Opposite Party (Versus)</th>
+                <th>Under Section</th>
+                <th>Stage / For</th>
+                <th>Next Date</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    showToast('success', `Prepared PDF table for ${listToExport.length} cases!`)
   }
 
   // =====================================================================
@@ -584,9 +594,9 @@ export default function CaseManagement() {
                 <span>Dashboard</span>
               </button>
 
-              <button className="btn-secondary btn-export" onClick={handleExportCSV} title="Export all cases to CSV file">
+              <button className="btn-secondary btn-export" onClick={handleExportPDF} title="Export cases table to PDF">
                 <Download size={14} />
-                <span>Export CSV</span>
+                <span>Export</span>
               </button>
 
               <button className="btn-secondary btn-import" onClick={() => setShowImportModal(true)} title="Bulk import cases from CSV/Excel">
@@ -594,9 +604,19 @@ export default function CaseManagement() {
                 <span>Import Cases</span>
               </button>
 
-              <button className="btn-primary" onClick={handleClear} title="Register new case">
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  handleClear()
+                  setTimeout(() => {
+                    formPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    caseNoInputRef.current?.focus()
+                  }, 50)
+                }}
+                title="Register new case"
+              >
                 <FolderPlus size={14} />
-                <span>New Case Registration</span>
+                <span>New Case</span>
               </button>
             </div>
           </div>
@@ -614,7 +634,7 @@ export default function CaseManagement() {
           {/* Two-Panel Layout */}
           <div className="mgmt-two-panel">
             {/* ================= LEFT SIDE: STREAMLINED CASE FORM ================= */}
-            <div className="mgmt-form-panel">
+            <div className="mgmt-form-panel" ref={formPanelRef}>
               <div className="panel-card-head">
                 <div className="pch-title">
                   <span className="pch-dot pch-violet" />
@@ -636,6 +656,7 @@ export default function CaseManagement() {
                     <div className="input-with-icon">
                       <Hash size={13} className="input-ic" />
                       <input
+                        ref={caseNoInputRef}
                         type="text"
                         name="caseNumber"
                         placeholder="e.g. GR - 175/14 or CR/342/26"
@@ -829,14 +850,44 @@ export default function CaseManagement() {
                   </div>
                 </div>
 
+                <div className="form-row-2">
+                  <div className="form-field">
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Chamber Rack No.
+                    </label>
+                    <input
+                      type="text"
+                      name="rackNo"
+                      placeholder="e.g. R-1"
+                      className="form-input"
+                      value={formData.rackNo}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Chamber Room No.
+                    </label>
+                    <input
+                      type="text"
+                      name="roomNo"
+                      placeholder="e.g. Rm-2"
+                      className="form-input"
+                      value={formData.roomNo}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
                 {/* Action Buttons Row */}
                 <div
                   className="mgmt-btn-bar"
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: selectedCaseId ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)',
-                    gap: selectedCaseId ? '4px' : '6px',
-                    marginTop: '4px'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginTop: '6px'
                   }}
                 >
                   <button
@@ -845,10 +896,10 @@ export default function CaseManagement() {
                     onClick={handleSave}
                     disabled={loading || !!selectedCaseId}
                     title={selectedCaseId ? 'Clear selection to create a new case' : 'Save case'}
-                    style={{ height: '34px', padding: '0 2px', fontSize: selectedCaseId ? '10.5px' : '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    style={{ flex: 1, height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                   >
-                    <Save size={12} />
-                    <span>{selectedCaseId ? 'SAVE' : 'SAVE CASE'}</span>
+                    <Save size={14} />
+                    <span>SAVE</span>
                   </button>
 
                   <button
@@ -856,35 +907,51 @@ export default function CaseManagement() {
                     className="act-btn btn-update"
                     onClick={handleUpdate}
                     disabled={loading || !selectedCaseId}
-                    title={!selectedCaseId ? 'Select a case from the table to update' : 'Save modifications'}
-                    style={{ height: '34px', padding: '0 2px', fontSize: selectedCaseId ? '10.5px' : '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    title={!selectedCaseId ? 'Select a case from the table to update' : 'Update'}
+                    aria-label="Update"
+                    onMouseEnter={() => setHoveredBtn('update')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
                   >
-                    <RefreshCw size={12} />
-                    <span>UPDATE</span>
+                    <RefreshCw size={15} />
+                    {hoveredBtn === 'update' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Update
+                      </span>
+                    )}
                   </button>
 
                   {selectedCaseId && (
                     <button
                       type="button"
                       className="act-btn"
-                      style={{
-                        background: '#fee2e2',
-                        color: '#dc2626',
-                        borderColor: '#fca5a5',
-                        height: '34px',
-                        padding: '0 2px',
-                        fontSize: '10.5px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '3px'
-                      }}
                       onClick={() => promptDeleteCase(selectedCase)}
                       disabled={loading}
-                      title="Delete case"
+                      title="Delete"
+                      aria-label="Delete"
+                      onMouseEnter={() => setHoveredBtn('delete')}
+                      onMouseLeave={() => setHoveredBtn(null)}
+                      style={{
+                        position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0,
+                        background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5'
+                      }}
                     >
-                      <Trash2 size={12} />
-                      <span>DELETE</span>
+                      <Trash2 size={15} />
+                      {hoveredBtn === 'delete' && (
+                        <span style={{
+                          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                          background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                          padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                          boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                        }}>
+                          Delete
+                        </span>
+                      )}
                     </button>
                   )}
 
@@ -893,22 +960,46 @@ export default function CaseManagement() {
                     className="act-btn btn-print"
                     onClick={handlePrint}
                     disabled={!selectedCaseId}
-                    title="Print case docket"
-                    style={{ height: '34px', padding: '0 2px', fontSize: selectedCaseId ? '10.5px' : '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    title="Print"
+                    aria-label="Print"
+                    onMouseEnter={() => setHoveredBtn('print')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
                   >
-                    <Printer size={12} />
-                    <span>PRINT</span>
+                    <Printer size={15} />
+                    {hoveredBtn === 'print' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Print
+                      </span>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     className="act-btn btn-clear"
                     onClick={handleClear}
-                    title="Clear fields"
-                    style={{ height: '34px', padding: '0 2px', fontSize: selectedCaseId ? '10.5px' : '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    title="Clear"
+                    aria-label="Clear"
+                    onMouseEnter={() => setHoveredBtn('clear')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
                   >
-                    <XCircle size={12} />
-                    <span>CLEAR</span>
+                    <XCircle size={15} />
+                    {hoveredBtn === 'clear' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Clear
+                      </span>
+                    )}
                   </button>
                 </div>
               </form>
@@ -1193,7 +1284,17 @@ export default function CaseManagement() {
             <div className="mgmt-modal-overlay" onClick={() => setViewModalCase(null)}>
               <div
                 className="mgmt-modal-box"
-                style={{ maxWidth: '620px', width: '92%' }}
+                style={{
+                  maxWidth: '640px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  maxHeight: '88vh',
+                  overflowY: 'auto',
+                  background: '#ffffff'
+                }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
@@ -1201,19 +1302,21 @@ export default function CaseManagement() {
                     <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
                       Case Docket — {viewModalCase.caseNumber || viewModalCase.caseNo}
                     </h3>
-                    <div style={{ color: '#64748b', fontSize: '12px' }}>Case ID: {viewModalCase.id} · Client: {viewModalCase.clientName}</div>
+                    <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>
+                      Case ID: {viewModalCase.id} · Client: {viewModalCase.clientName || 'Unassigned'}
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setViewModalCase(null)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#94a3b8' }}
+                    style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: '14px', color: '#64748b', display: 'grid', placeItems: 'center' }}
                   >
                     ✕
                   </button>
                 </div>
 
-                <div style={{ marginTop: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
-                  <div><strong>Court:</strong> {viewModalCase.courtName}</div>
+                <div style={{ marginTop: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div><strong>Court:</strong> {viewModalCase.courtName || '—'}</div>
                   <div><strong>Versus:</strong> {viewModalCase.vsName || viewModalCase.versusName || '—'}</div>
                   <div><strong>Under Section:</strong> {viewModalCase.underSection || viewModalCase.us || '—'}</div>
                   <div><strong>Stage / For:</strong> {viewModalCase.purpose || viewModalCase.caseFor || viewModalCase.for || '—'}</div>
@@ -1225,14 +1328,14 @@ export default function CaseManagement() {
                   <div><strong>Appearing Advocate:</strong> {viewModalCase.advocateName || viewModalCase.adAdvName || '—'}</div>
                 </div>
 
-                {viewModalCase.notes && (
-                  <div style={{ marginTop: '12px', background: '#f8fafc', padding: '10px', borderRadius: '6px', fontSize: '12px' }}>
+                {(viewModalCase.notes || viewModalCase.caseDetails) && (
+                  <div style={{ marginTop: '12px', background: '#f8fafc', padding: '10px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
                     <strong>Brief &amp; Running Notes:</strong>
                     <p style={{ margin: '4px 0 0', color: '#334155' }}>{viewModalCase.notes || viewModalCase.caseDetails}</p>
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                   <button className="btn-secondary" onClick={() => setViewModalCase(null)}>
                     Close Docket
                   </button>
@@ -1244,20 +1347,32 @@ export default function CaseManagement() {
           {/* ================= DELETE CASE MODAL ================= */}
           {showDeleteModal && caseToDelete && (
             <div className="mgmt-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '420px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'grid', placeItems: 'center' }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '430px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  background: '#ffffff'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     <AlertCircle size={20} />
                   </div>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#991b1b' }}>Delete Case Record</h3>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Action cannot be undone.</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>Action cannot be undone.</p>
                   </div>
                 </div>
-                <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5', margin: '0 0 16px' }}>
+                <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5', margin: '0 0 18px' }}>
                   Are you sure you want to permanently delete case <strong>{caseToDelete.caseNumber || caseToDelete.caseNo}</strong> ({caseToDelete.id})?
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                   <button className="btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
                   <button
                     className="btn-primary"

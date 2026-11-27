@@ -137,15 +137,15 @@ export default function ForWiseCaseReport() {
               <span className="panel-count">{filteredCases.length} Matching Dockets</span>
             </div>
 
-            <div className="table-scroll-container">
-              <table className="mgmt-table">
+            <div className="table-scroll-container" style={{ overflowX: 'auto' }}>
+              <table className="mgmt-table" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '85px' }}>CASE ID</th>
-                    <th>FOR / PURPOSE OF HEARING</th>
-                    <th>CASE NO &amp; COURT</th>
-                    <th>CLIENT NAME</th>
-                    <th>UNDER SECTION</th>
+                    <th style={{ width: '75px' }}>CASE ID</th>
+                    <th style={{ width: '22%' }}>FOR / PURPOSE OF HEARING</th>
+                    <th style={{ width: '19%' }}>CASE NO &amp; COURT</th>
+                    <th style={{ width: '20%' }}>CLIENT NAME</th>
+                    <th style={{ width: '16%' }}>UNDER SECTION</th>
                     <th style={{ width: '95px' }}>NEXT DATE</th>
                     <th style={{ width: '85px', textAlign: 'right' }}>DUE (₹)</th>
                   </tr>
@@ -161,23 +161,39 @@ export default function ForWiseCaseReport() {
                   ) : (
                     filteredCases.map((cs) => (
                       <tr key={cs.id}>
-                        <td><span className="id-pill case-id">{cs.id}</span></td>
-                        <td>
-                          <strong style={{ color: '#6d28d9', fontSize: '13px' }}>{cs.purpose}</strong>
-                          {cs.caseDetails && <small className="muted-subtext">{cs.caseDetails}</small>}
+                        <td style={{ whiteSpace: 'nowrap' }}><span className="id-pill case-id">{cs.id}</span></td>
+                        <td style={{ overflow: 'hidden' }} title={cs.caseDetails || cs.purpose || ''}>
+                          <strong style={{ color: '#6d28d9', fontSize: '12.5px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {cs.purpose || '—'}
+                          </strong>
+                          {cs.caseDetails && (
+                            <small className="muted-subtext" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {cs.caseDetails}
+                            </small>
+                          )}
                         </td>
-                        <td>
-                          <strong className="primary-text">{cs.caseNumber}</strong>
-                          <small className="muted-subtext">{cs.courtName}</small>
+                        <td style={{ overflow: 'hidden' }} title={`${cs.caseNumber || ''} - ${cs.courtName || ''}`}>
+                          <strong className="primary-text" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {cs.caseNumber || '—'}
+                          </strong>
+                          <small className="muted-subtext" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {cs.courtName || '—'}
+                          </small>
                         </td>
-                        <td>
-                          <span className="cell-client">{cs.clientName}</span>
-                          <small className="cell-cid">{cs.phone}</small>
+                        <td style={{ overflow: 'hidden' }} title={`${cs.clientName || ''} ${cs.phone || ''}`}>
+                          <span className="cell-client" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {cs.clientName || '—'}
+                          </span>
+                          <small className="cell-cid" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {cs.phone || ''}
+                          </small>
                         </td>
-                        <td>
-                          <span style={{ fontSize: '11px', color: '#475569' }}>{cs.underSection || '—'}</span>
+                        <td style={{ overflow: 'hidden' }} title={cs.underSection || ''}>
+                          <span style={{ fontSize: '11px', color: '#475569', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {cs.underSection || '—'}
+                          </span>
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
                           <div className="hearing-date-badge">
                             <Calendar size={11} className="h-cal-ic" />
                             <span>{cs.nextDate}</span>

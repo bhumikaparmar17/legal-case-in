@@ -261,7 +261,7 @@ export default function DocumentUploadSystem() {
           {/* Two Panel Layout */}
           <div className="mgmt-two-panel">
             {/* Upload Form */}
-            <div className="mgmt-form-panel">
+            <div className="mgmt-form-panel" style={{ minWidth: 0 }}>
               <div className="panel-card-head">
                 <div className="pch-title">
                   <span className="pch-dot pch-violet" />
@@ -310,6 +310,7 @@ export default function DocumentUploadSystem() {
                   {uploadForm.entityType === 'case' ? (
                     <select
                       className={`form-input form-select ${formErrors.associatedId ? 'input-err' : ''}`}
+                      style={{ width: '100%', maxWidth: '100%', minWidth: 0, height: '34px' }}
                       value={uploadForm.associatedId}
                       onChange={handleEntitySelect}
                     >
@@ -323,6 +324,7 @@ export default function DocumentUploadSystem() {
                   ) : uploadForm.entityType === 'client' ? (
                     <select
                       className={`form-input form-select ${formErrors.associatedId ? 'input-err' : ''}`}
+                      style={{ width: '100%', maxWidth: '100%', minWidth: 0, height: '34px' }}
                       value={uploadForm.associatedId}
                       onChange={handleEntitySelect}
                     >
@@ -348,9 +350,12 @@ export default function DocumentUploadSystem() {
                 {/* Document Type */}
                 <div className="form-row-2">
                   <div className="form-field">
-                    <label className="field-lbl">Document Category <span className="req">*</span></label>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Document Category <span className="req">*</span>
+                    </label>
                     <select
                       className="form-input form-select"
+                      style={{ height: '34px' }}
                       value={uploadForm.docType}
                       onChange={(e) => setUploadForm((prev) => ({ ...prev, docType: e.target.value }))}
                     >
@@ -368,11 +373,14 @@ export default function DocumentUploadSystem() {
                   </div>
 
                   <div className="form-field">
-                    <label className="field-lbl">Document Title / Display Name <span className="req">*</span></label>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Document Title <span className="req">*</span>
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g. Bail_Order_ACJM.pdf"
                       className={`form-input ${formErrors.docName ? 'input-err' : ''}`}
+                      style={{ height: '34px' }}
                       value={uploadForm.docName}
                       onChange={(e) => setUploadForm((prev) => ({ ...prev, docName: e.target.value }))}
                     />
@@ -416,12 +424,22 @@ export default function DocumentUploadSystem() {
                   />
                 </div>
 
-                <div className="mgmt-btn-bar">
+                <div className="mgmt-btn-bar" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
                   <button
                     type="submit"
                     className="btn-primary"
                     disabled={uploading}
-                    style={{ background: '#7c3aed', borderColor: '#6d28d9', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    style={{
+                      flex: 1,
+                      height: '38px',
+                      background: '#7c3aed',
+                      borderColor: '#6d28d9',
+                      padding: '0 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
                   >
                     <UploadCloud size={15} />
                     <span>{uploading ? 'Archiving Document...' : 'UPLOAD & SAVE TO ID'}</span>
@@ -430,6 +448,7 @@ export default function DocumentUploadSystem() {
                   <button
                     type="button"
                     className="btn-secondary"
+                    style={{ height: '38px', padding: '0 16px', flexShrink: 0 }}
                     onClick={() => {
                       setSelectedFile(null)
                       setUploadForm(initialForm)

@@ -1289,9 +1289,21 @@ export default function ClientManagement({ viewMode }) {
           {/* ================= DELETE CONFIRMATION MODAL ================= */}
           {showDeleteModal && clientToDelete && (
             <div className="mgmt-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '420px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fee2e2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '430px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  background: '#ffffff'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fee2e2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     <Trash2 size={18} color="#dc2626" />
                   </div>
                   <div>
@@ -1299,10 +1311,10 @@ export default function ClientManagement({ viewMode }) {
                     <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>This action cannot be undone.</p>
                   </div>
                 </div>
-                <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5', margin: '10px 0 16px' }}>
+                <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5', margin: '0 0 18px' }}>
                   Are you sure you want to permanently delete <strong>{clientToDelete.name}</strong> ({clientToDelete.id})? All case linkages will be detached.
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                   <button className="btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
                   <button
                     className="btn-primary"

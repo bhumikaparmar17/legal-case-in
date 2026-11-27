@@ -437,15 +437,36 @@ export default function DateWiseReminders() {
           {/* Add / Edit Reminder Modal */}
           {showAddModal && (
             <div className="mgmt-modal-overlay" onClick={() => setShowAddModal(false)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '480px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div className="mgmt-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700' }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '500px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  maxHeight: '88vh',
+                  overflowY: 'auto',
+                  background: '#ffffff'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mgmt-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '14px' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
                     {editingReminder ? 'Edit Reminder' : 'Add New Chamber Reminder'}
                   </h3>
-                  <button className="clear-search-btn" onClick={() => setShowAddModal(false)}>✕</button>
+                  <button
+                    type="button"
+                    className="clear-search-btn"
+                    onClick={() => setShowAddModal(false)}
+                    style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                <form onSubmit={handleSaveReminder} style={{ marginTop: '12px' }}>
+                <form onSubmit={handleSaveReminder}>
                   <div className="form-field" style={{ marginBottom: '10px' }}>
                     <label className="field-lbl">Autofill from Registered Client (Optional)</label>
                     <select
@@ -494,11 +515,12 @@ export default function DateWiseReminders() {
                     </div>
                   </div>
 
-                  <div className="form-field" style={{ marginBottom: '14px' }}>
+                  <div className="form-field" style={{ marginBottom: '16px' }}>
                     <label className="field-lbl">Reasons / Matters for Adv. Anupam Maity <span className="req">*</span></label>
                     <textarea
                       rows={3}
                       className="form-input form-textarea"
+                      style={{ height: 'auto', padding: '8px 10px' }}
                       value={formData.reasons}
                       onChange={(e) => setFormData((p) => ({ ...p, reasons: e.target.value }))}
                       placeholder="e.g. Production of certified deed; witness cross-examination; anticipatory bail reminder..."
@@ -506,7 +528,7 @@ export default function DateWiseReminders() {
                     />
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                     <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
                     <button type="submit" className="btn-primary" style={{ background: '#dc2626', borderColor: '#b91c1c' }}>
                       {editingReminder ? 'Update Reminder' : 'Save Reminder'}
@@ -520,19 +542,32 @@ export default function DateWiseReminders() {
           {/* Delete Modal */}
           {deleteTarget && (
             <div className="mgmt-modal-overlay" onClick={() => setDeleteTarget(null)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '400px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fee2e2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '430px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  background: '#ffffff'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fee2e2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     <Trash2 size={18} color="#dc2626" />
                   </div>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#991b1b' }}>Delete Reminder?</h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>This action cannot be undone.</p>
                   </div>
                 </div>
-                <p style={{ fontSize: '13px', color: '#334155', margin: '10px 0 16px' }}>
+                <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5', margin: '0 0 18px' }}>
                   Are you sure you want to delete this reminder for <strong>{deleteTarget.clientName}</strong> on <strong>{deleteTarget.date}</strong>?
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                   <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
                   <button className="btn-primary" style={{ background: '#dc2626', borderColor: '#b91c1c' }} onClick={confirmDelete}>
                     Confirm Delete
