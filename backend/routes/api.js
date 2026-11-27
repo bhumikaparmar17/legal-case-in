@@ -76,12 +76,15 @@ router.get('/clients', async (req, res) => {
 router.post('/clients', async (req, res) => {
   try {
     const { name, relation, address, phone, referenceName, referencePhone, fees, date } = req.body
-    const result = await query(
-      'INSERT INTO clientmaster (ClientName, So, Address, PhoneNo, RefName, RefPhNo, ConFees, ClientDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [name || '', relation || '', address || '', phone || '', referenceName || '', referencePhone || '', Number(fees || 0), date || '']
+    const [maxRow] = await query('SELECT COALESCE(MAX(ID), 0) + 1 AS nextId FROM clientmaster')
+    const nextId = maxRow ? maxRow.nextId : 1
+
+    await query(
+      'INSERT INTO clientmaster (ID, ClientName, So, Address, PhoneNo, RefName, RefPhNo, ConFees, ClientDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [nextId, name || '', relation || '', address || '', phone || '', referenceName || '', referencePhone || '', Number(fees || 0), date || '']
     )
     const newClient = {
-      id: String(result.insertId),
+      id: String(nextId),
       name: name || '',
       relation: relation || '',
       address: address || '',
@@ -100,13 +103,16 @@ router.post('/clients', async (req, res) => {
 
 router.put('/clients/:id', async (req, res) => {
   try {
-    const { id } = req.params
+    const numericId = parseInt(String(req.params.id).replace(/\D/g, ''), 10)
+    if (!numericId) {
+      return res.status(400).json({ error: 'Invalid client ID' })
+    }
     const { name, relation, address, phone, referenceName, referencePhone, fees, date } = req.body
     await query(
       'UPDATE clientmaster SET ClientName = ?, So = ?, Address = ?, PhoneNo = ?, RefName = ?, RefPhNo = ?, ConFees = ?, ClientDate = ? WHERE ID = ?',
-      [name || '', relation || '', address || '', phone || '', referenceName || '', referencePhone || '', Number(fees || 0), date || '', id]
+      [name || '', relation || '', address || '', phone || '', referenceName || '', referencePhone || '', Number(fees || 0), date || '', numericId]
     )
-    res.json({ id, name, relation, address, phone, referenceName, referencePhone, fees: Number(fees || 0), date })
+    res.json({ id: String(numericId), name, relation, address, phone, referenceName, referencePhone, fees: Number(fees || 0), date })
   } catch (err) {
     console.error('Error updating client:', err)
     res.status(500).json({ error: 'Failed to update client' })
@@ -115,9 +121,12 @@ router.put('/clients/:id', async (req, res) => {
 
 router.delete('/clients/:id', async (req, res) => {
   try {
-    const { id } = req.params
-    await query('DELETE FROM clientmaster WHERE ID = ?', [id])
-    res.json({ success: true, id })
+    const numericId = parseInt(String(req.params.id).replace(/\D/g, ''), 10)
+    if (!numericId) {
+      return res.status(400).json({ error: 'Invalid client ID' })
+    }
+    await query('DELETE FROM clientmaster WHERE ID = ?', [numericId])
+    res.json({ success: true, id: String(numericId) })
   } catch (err) {
     console.error('Error deleting client:', err)
     res.status(500).json({ error: 'Failed to delete client' })

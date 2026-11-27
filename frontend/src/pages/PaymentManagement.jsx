@@ -66,24 +66,34 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
     remarks: '',
   })
 
-  // Helper to compute real-time Paid, Due, and Status for any bill from linked payments
+  // Pre-index payments for instant O(1) lookup per bill row
+  const { paymentsByClient, paymentsByBill } = useMemo(() => {
+    const byClient = new Map()
+    const byBill = new Map()
+    for (let i = 0; i < payments.length; i++) {
+      const p = payments[i]
+      const amt = Number(p.amount || 0)
+      if (amt <= 0) continue
+      const cId = String(p.clientId || '').replace(/\D/g, '')
+      if (cId) byClient.set(cId, (byClient.get(cId) || 0) + amt)
+      if (p.billId) {
+        const bKey = String(p.billId)
+        byBill.set(bKey, (byBill.get(bKey) || 0) + amt)
+      }
+    }
+    return { paymentsByClient: byClient, paymentsByBill: byBill }
+  }, [payments])
+
+  // Helper to compute real-time Paid, Due, and Status for any bill in O(1) time
   const getBillFinancials = (b) => {
     const total = Number(b.totalBillAmount || b.totalAmount || b.amount || 0)
-    const bClientId = String(b.clientId || '').replace(/\D/g, '')
-    const bCaseId = String(b.caseId || '')
     const bBillId = String(b.id || '')
     const bBillNo = String(b.billNumber || '')
+    const bClientId = String(b.clientId || '').replace(/\D/g, '')
 
-    const matchedPayments = payments.filter((p) => {
-      if (p.billId && (String(p.billId) === bBillId || String(p.billId) === bBillNo)) return true
-      if (bCaseId && p.caseId && String(p.caseId) === bCaseId) return true
-      const pClientId = String(p.clientId || '').replace(/\D/g, '')
-      if (bClientId && pClientId && pClientId === bClientId) return true
-      return false
-    })
-
-    const paidFromReceipts = matchedPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
-    const paid = Math.max(Number(b.paidAmount || 0), paidFromReceipts)
+    const paidFromBill = (bBillId ? paymentsByBill.get(bBillId) : 0) || (bBillNo ? paymentsByBill.get(bBillNo) : 0) || 0
+    const paidFromClient = bClientId ? (paymentsByClient.get(bClientId) || 0) : 0
+    const paid = Math.max(Number(b.paidAmount || 0), paidFromBill || paidFromClient)
     const due = Math.max(0, total - paid)
     const status = total > 0 && paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Due'
     return { total, paid, due, status }
@@ -129,24 +139,32 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
 
   useEffect(() => {
-    // 1. Live API fetch on mount -> visible in Network tab
-    api.getBills().then((data) => {
-      if (Array.isArray(data)) setBills(data)
-    }).catch(() => {})
+    // Only fetch from API if local storage cache is empty (avoids re-downloading 12MB+ on every tab switch)
+    if (bills.length === 0) {
+      api.getBills().then((data) => {
+        if (Array.isArray(data)) setBills(data)
+      }).catch(() => {})
+    }
 
-    api.getPayments().then((data) => {
-      if (Array.isArray(data)) setPayments(data)
-    }).catch(() => {})
+    if (payments.length === 0) {
+      api.getPayments().then((data) => {
+        if (Array.isArray(data)) setPayments(data)
+      }).catch(() => {})
+    }
 
-    api.getCases().then((data) => {
-      if (Array.isArray(data)) setCases(data)
-    }).catch(() => {})
+    if (cases.length === 0) {
+      api.getCases().then((data) => {
+        if (Array.isArray(data)) setCases(data)
+      }).catch(() => {})
+    }
 
-    api.getClients().then((data) => {
-      if (Array.isArray(data)) setClients(data)
-    }).catch(() => {})
+    if (clients.length === 0) {
+      api.getClients().then((data) => {
+        if (Array.isArray(data)) setClients(data)
+      }).catch(() => {})
+    }
 
-    // 2. Storage event listener for reactivity
+    // Storage event listener for instant reactivity across components
     return onStorageUpdate(() => {
       setCases(getCases())
       setClients(getClients())
@@ -183,32 +201,40 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   // ----------------------------------------------------
   // BILLING HANDLERS
   // ----------------------------------------------------
-  // Filter cases/clients for Bill Registration
+  // Filter cases/clients for Bill Registration (early exit at 10 results for zero lag)
   const billSearchResults = useMemo(() => {
     const q = billSearchQuery.trim().toLowerCase()
 
-    // 1. Matching cases from Case Master
-    const matchedCases = cases.filter((cs) => {
-      if (!q) return true
-      return (
+    const matchedCases = []
+    for (let i = 0; i < cases.length && matchedCases.length < 6; i++) {
+      const cs = cases[i]
+      if (!q || (
         (cs.clientId && String(cs.clientId).toLowerCase().includes(q)) ||
         (cs.clientName && String(cs.clientName).toLowerCase().includes(q)) ||
         (cs.id && String(cs.id).toLowerCase().includes(q)) ||
         (cs.caseNumber && String(cs.caseNumber).toLowerCase().includes(q)) ||
         (cs.phone && String(cs.phone).includes(q))
-      )
-    })
+      )) {
+        matchedCases.push(cs)
+      }
+    }
 
-    // 2. Matching clients from Client Master
-    const matchedClients = clients.filter((c) => {
-      if (!q) return true
-      const cId = String(c.clientId || c.id || '').toLowerCase()
-      const cName = String(c.clientName || c.name || '').toLowerCase()
-      const cPhone = String(c.phone || c.mobile || '')
-      return cId.includes(q) || cName.includes(q) || cPhone.includes(q)
-    })
+    const matchedClients = []
+    for (let i = 0; i < clients.length && matchedClients.length < 10; i++) {
+      const c = clients[i]
+      if (!q) {
+        matchedClients.push(c)
+      } else {
+        const cId = String(c.clientId || c.id || '').toLowerCase()
+        const cName = String(c.clientName || c.name || '').toLowerCase()
+        const cPhone = String(c.phone || c.mobile || '')
+        if (cId.includes(q) || cName.includes(q) || cPhone.includes(q)) {
+          matchedClients.push(c)
+        }
+      }
+    }
 
-    // Map clients into selectable billing items
+    // Map only the top 10 matched clients
     const clientOptions = matchedClients.map((c) => {
       const cId = String(c.clientId || c.id || '')
       const cName = c.clientName || c.name || ''
@@ -490,26 +516,35 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   const paymentSearchResults = useMemo(() => {
     const q = paymentSearchQuery.trim().toLowerCase()
 
-    // 1. Matching cases
-    const matchedCases = cases.filter((cs) => {
-      if (!q) return true
-      return (
+    // Early exit at 6 cases and 10 clients to avoid 50M+ loop iterations
+    const matchedCases = []
+    for (let i = 0; i < cases.length && matchedCases.length < 6; i++) {
+      const cs = cases[i]
+      if (!q || (
         (cs.clientId && String(cs.clientId).toLowerCase().includes(q)) ||
         (cs.clientName && String(cs.clientName).toLowerCase().includes(q)) ||
         (cs.id && String(cs.id).toLowerCase().includes(q)) ||
         (cs.caseNumber && String(cs.caseNumber).toLowerCase().includes(q)) ||
         (cs.phone && String(cs.phone).includes(q))
-      )
-    })
+      )) {
+        matchedCases.push(cs)
+      }
+    }
 
-    // 2. Matching clients
-    const matchedClients = clients.filter((c) => {
-      if (!q) return true
-      const cId = String(c.clientId || c.id || '').toLowerCase()
-      const cName = String(c.clientName || c.name || '').toLowerCase()
-      const cPhone = String(c.phone || c.mobile || '')
-      return cId.includes(q) || cName.includes(q) || cPhone.includes(q)
-    })
+    const matchedClients = []
+    for (let i = 0; i < clients.length && matchedClients.length < 10; i++) {
+      const c = clients[i]
+      if (!q) {
+        matchedClients.push(c)
+      } else {
+        const cId = String(c.clientId || c.id || '').toLowerCase()
+        const cName = String(c.clientName || c.name || '').toLowerCase()
+        const cPhone = String(c.phone || c.mobile || '')
+        if (cId.includes(q) || cName.includes(q) || cPhone.includes(q)) {
+          matchedClients.push(c)
+        }
+      }
+    }
 
     const clientOptions = matchedClients.map((c) => {
       const cId = String(c.clientId || c.id || '')
@@ -919,11 +954,6 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
               >
                 <Receipt size={14} />
                 <span>Date-Wise Receipts</span>
-              </button>
-
-              <button className="btn-secondary" onClick={() => window.print()}>
-                <Printer size={14} />
-                <span>Print</span>
               </button>
             </div>
           </div>
@@ -1872,9 +1902,20 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                   DATE WISE PAYMENT DETAILS
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '13px', color: '#0f172a', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: '700', fontSize: '13px', color: '#0f172a', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <span>Listing Date: <u>{selectedDate}</u></span>
-                  <span>Total Amount Collected: <u style={{ color: '#16a34a' }}>₹{totalDateWiseAmt.toLocaleString('en-IN')}</u></span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span>Total Amount Collected: <u style={{ color: '#16a34a' }}>₹{totalDateWiseAmt.toLocaleString('en-IN')}</u></span>
+                    <button
+                      type="button"
+                      className="btn-secondary no-print"
+                      onClick={() => window.print()}
+                      style={{ padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      <Printer size={13} />
+                      <span>Print</span>
+                    </button>
+                  </div>
                 </div>
 
                 {dateWisePayments.length === 0 ? (

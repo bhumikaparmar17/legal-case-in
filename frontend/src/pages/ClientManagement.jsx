@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Users, UserPlus, Save, RefreshCw, Printer, XCircle, Search,
@@ -22,6 +22,19 @@ export default function ClientManagement({ viewMode }) {
   const isInfoMode = viewMode === 'information' || location.pathname.includes('client-information')
   const [clients, setClients] = useState(() => getClients())
   const [selectedId, setSelectedId] = useState(null)
+  const formPanelRef = useRef(null)
+  const nameInputRef = useRef(null)
+  const [hoveredBtn, setHoveredBtn] = useState(null)
+
+  // Compute strict sequential next Client ID (queue order: max existing numeric ID + 1)
+  const nextClientId = useMemo(() => {
+    let maxId = 0
+    clients.forEach((c) => {
+      const num = parseInt(String(c.id || '').replace(/\D/g, ''), 10)
+      if (!isNaN(num) && num > maxId) maxId = num
+    })
+    return String(maxId + 1)
+  }, [clients])
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
@@ -461,9 +474,18 @@ export default function ClientManagement({ viewMode }) {
                   <span>Register New Client (Master)</span>
                 </button>
               ) : (
-                <button className="btn-primary" onClick={handleClear}>
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    handleClear()
+                    setTimeout(() => {
+                      formPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      nameInputRef.current?.focus()
+                    }, 50)
+                  }}
+                >
                   <UserPlus size={14} />
-                  <span>New Client Form</span>
+                  <span>New Client</span>
                 </button>
               )}
             </div>
@@ -519,7 +541,7 @@ export default function ClientManagement({ viewMode }) {
           <div className={isInfoMode ? "mgmt-single-panel" : "mgmt-two-panel"}>
             {/* ================= LEFT PANEL: CLIENT FORM (Only in Client Master) ================= */}
             {!isInfoMode && (
-              <div className="mgmt-form-panel">
+              <div className="mgmt-form-panel" ref={formPanelRef}>
               <div className="panel-card-head">
                 <div className="pch-title">
                   <span className="pch-dot pch-blue" />
@@ -654,8 +676,10 @@ export default function ClientManagement({ viewMode }) {
                     <input
                       type="text"
                       className="form-input readonly-input"
-                      value={selectedId || '(Auto Assigned Upon Save)'}
+                      value={selectedId || nextClientId}
                       readOnly
+                      tabIndex={-1}
+                      style={{ pointerEvents: 'none', background: '#f1f5f9', fontWeight: '700', color: '#1d4ed8' }}
                     />
                   </div>
                   <div className="form-field">
@@ -678,6 +702,7 @@ export default function ClientManagement({ viewMode }) {
                 <div className="form-field">
                   <label className="field-lbl">Client Full Name <span className="req">*</span></label>
                   <input
+                    ref={nameInputRef}
                     type="text"
                     name="name"
                     placeholder="Enter full legal name of client"
@@ -756,16 +781,7 @@ export default function ClientManagement({ viewMode }) {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {(formData.otherPhones || [{ name: '', phone: '' }]).map((op, idx) => (
-                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'center' }}>
-                        <div>
-                          <input
-                            type="text"
-                            placeholder="Reference Name / Relation (e.g. WhatsApp, Brother)"
-                            className="form-input"
-                            value={op.name}
-                            onChange={(e) => handleOtherPhoneChange(idx, 'name', e.target.value)}
-                          />
-                        </div>
+                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: (formData.otherPhones || []).length > 1 ? '1fr auto' : '1fr', gap: '8px', alignItems: 'center' }}>
                         <div className="input-with-icon">
                           <Phone size={14} className="input-ic" />
                           <input
@@ -902,10 +918,23 @@ export default function ClientManagement({ viewMode }) {
                     className="act-btn btn-update"
                     onClick={handleUpdate}
                     disabled={loading || !selectedId}
-                    title={!selectedId ? 'Select a client from the table to update' : 'Save modifications'}
+                    title={!selectedId ? 'Select a client from the table to update' : 'Update'}
+                    aria-label="Update"
+                    onMouseEnter={() => setHoveredBtn('update')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative' }}
                   >
-                    <RefreshCw size={14} />
-                    <span>UPDATE</span>
+                    <RefreshCw size={15} />
+                    {hoveredBtn === 'update' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Update
+                      </span>
+                    )}
                   </button>
 
                   {selectedId && (
@@ -927,20 +956,46 @@ export default function ClientManagement({ viewMode }) {
                     className="act-btn btn-print"
                     onClick={handlePrint}
                     disabled={!selectedId}
-                    title="Print legal client registration docket"
+                    title="Print"
+                    aria-label="Print"
+                    onMouseEnter={() => setHoveredBtn('print')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative' }}
                   >
-                    <Printer size={14} />
-                    <span>PRINT</span>
+                    <Printer size={15} />
+                    {hoveredBtn === 'print' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Print
+                      </span>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     className="act-btn btn-clear"
                     onClick={handleClear}
-                    title="Clear fields for a fresh registration"
+                    title="Clear"
+                    aria-label="Clear"
+                    onMouseEnter={() => setHoveredBtn('clear')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative' }}
                   >
-                    <XCircle size={14} />
-                    <span>CLEAR</span>
+                    <XCircle size={15} />
+                    {hoveredBtn === 'clear' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Clear
+                      </span>
+                    )}
                   </button>
                 </div>
               </form>
