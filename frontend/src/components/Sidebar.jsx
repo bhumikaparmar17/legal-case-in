@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Briefcase, Scale, CreditCard, AlertTriangle,
   BellRing, Receipt, BarChart3, Tv, PanelLeftClose, PanelLeftOpen,
   Compass, FileSpreadsheet, BadgeIndianRupee, UploadCloud, Users,
-  BookOpen, CalendarClock, ShieldCheck
+  BookOpen, CalendarClock, ShieldCheck, X
 } from 'lucide-react'
 
 export default function Sidebar() {
@@ -22,6 +22,9 @@ export default function Sidebar() {
     }
   })
 
+  // Mobile drawer open state
+  const [mobileOpen, setMobileOpen] = useState(false)
+
   // Synchronize state across tabs and windows
   useEffect(() => {
     const handleToggle = () => {
@@ -32,9 +35,26 @@ export default function Sidebar() {
         }
       } catch (e) {}
     }
+    const handleMobileToggle = () => {
+      setMobileOpen((prev) => !prev)
+    }
+    const handleMobileClose = () => {
+      setMobileOpen(false)
+    }
     window.addEventListener('legalcase_sidebar_toggle', handleToggle)
-    return () => window.removeEventListener('legalcase_sidebar_toggle', handleToggle)
+    window.addEventListener('legalcase_mobile_sidebar_toggle', handleMobileToggle)
+    window.addEventListener('legalcase_mobile_sidebar_close', handleMobileClose)
+    return () => {
+      window.removeEventListener('legalcase_sidebar_toggle', handleToggle)
+      window.removeEventListener('legalcase_mobile_sidebar_toggle', handleMobileToggle)
+      window.removeEventListener('legalcase_mobile_sidebar_close', handleMobileClose)
+    }
   }, [])
+
+  // Auto-close mobile sidebar drawer on navigation
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [path])
 
   const toggle = () => {
     setExpanded((prev) => {
@@ -149,47 +169,73 @@ export default function Sidebar() {
   ]
 
   return (
-    <aside className={`rail ${expanded ? 'expanded' : 'collapsed'}`}>
-      <div className="rail-top">
-        <div className="rail-header">
-          <span className="rail-header-title">
-            <Compass size={14} />
-            <span>Navigation</span>
-          </span>
-          <button
-            className="rail-toggle-btn"
-            onClick={toggle}
-            title={expanded ? 'Collapse to icon view' : 'Expand sidebar'}
-          >
-            {expanded ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-          </button>
-        </div>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {mobileOpen && (
+        <div
+          className="mobile-sidebar-backdrop"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close navigation"
+        />
+      )}
 
-        <nav className="rail-nav">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            return (
+      <aside className={`rail ${expanded ? 'expanded' : 'collapsed'} ${mobileOpen ? 'mobile-open' : ''}`}>
+        <div className="rail-top">
+          <div className="rail-header">
+            <span className="rail-header-title">
+              <Compass size={14} />
+              <span>Navigation</span>
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <button
-                key={item.path}
-                className={`rail-btn ${item.active ? 'active' : ''}`}
-                onClick={() => navigate(item.path)}
-                title={item.label}
+                className="rail-toggle-btn desktop-toggle-btn"
+                onClick={toggle}
+                title={expanded ? 'Collapse to icon view' : 'Expand sidebar'}
               >
-                <Icon size={17} />
-                <span className="rail-label">{item.label}</span>
-                <span className="rail-tip">{item.shortLabel}</span>
+                {expanded ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
               </button>
-            )
-          })}
-        </nav>
-      </div>
 
-      <div className="rail-bottom">
-        <div className="rail-bottom-card">
-          <span className="pulse-dot" />
-          <span>Practice Suite Active</span>
+              <button
+                className="rail-toggle-btn mobile-close-btn"
+                onClick={() => setMobileOpen(false)}
+                title="Close menu"
+                aria-label="Close menu"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          <nav className="rail-nav">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.path}
+                  className={`rail-btn ${item.active ? 'active' : ''}`}
+                  onClick={() => {
+                    navigate(item.path)
+                    setMobileOpen(false)
+                  }}
+                  title={item.label}
+                >
+                  <Icon size={17} />
+                  <span className="rail-label">{item.label}</span>
+                  <span className="rail-tip">{item.shortLabel}</span>
+                </button>
+              )
+            })}
+          </nav>
         </div>
-      </div>
-    </aside>
+
+        <div className="rail-bottom">
+          <div className="rail-bottom-card">
+            <span className="pulse-dot" />
+            <span>Practice Suite Active</span>
+          </div>
+        </div>
+      </aside>
+    </>
   )
 }

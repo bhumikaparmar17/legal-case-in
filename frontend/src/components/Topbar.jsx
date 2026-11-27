@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Scale, Bell, LogOut, MapPin, Search, ChevronDown, Calendar, ShieldCheck, X } from 'lucide-react'
+import { Scale, Bell, LogOut, MapPin, Search, ChevronDown, Calendar, ShieldCheck, X, Menu } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { OFFICE, ALL_MODULES } from '../data/menu.js'
 
@@ -142,6 +142,16 @@ export default function Topbar() {
   return (
     <header className="topbar">
       <div className="tb-left">
+        <button
+          type="button"
+          className="tb-mobile-menu-btn"
+          onClick={() => window.dispatchEvent(new Event('legalcase_mobile_sidebar_toggle'))}
+          title="Toggle Navigation Menu"
+          aria-label="Toggle Navigation Menu"
+        >
+          <Menu size={20} strokeWidth={2.2} />
+        </button>
+
         <button className="tb-brand" onClick={() => navigate('/dashboard')} title="LegalCase Dashboard">
           <span className="tb-logo">
             <Scale size={17} strokeWidth={2.4} />
