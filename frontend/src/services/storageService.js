@@ -128,46 +128,7 @@ const SEED_REMINDERS = []
 const SEED_EXTRA_BRIEFS = []
 const SEED_WAITING_LIST = []
 
-// ----------------- Comprehensive Dummy Data Filter -----------------
-const DUMMY_MARKERS = [
-  'Subhendu Ghosh', 'Bhabani Charan Das', 'Alok Kumar Jana', 'CF-5001', 'CF-5002', 'CF-5003',
-  'Rajesh Kumar Sharma', 'GR - 175/14', 'W-501', 'ANN-101', 'Sunita Devi', 'Nirmal Chandra Patra',
-  'Madhabi Giri', 'EB-8001', 'EB-8002', 'EB-8003', 'EB-8004', 'Debashis Roy Chowdhury',
-  'Gour Mohan Pramanik', 'Shyamal Adak', 'DOC-901', 'DOC-902', 'DOC-903'
-]
-
-function isDummyItem(item) {
-  if (!item || typeof item !== 'object') return false
-  const str = JSON.stringify(item)
-  return DUMMY_MARKERS.some((marker) => str.includes(marker))
-}
-
-// Immediate execution on module load: strip all dummy caches from browser localStorage
-if (typeof window !== 'undefined') {
-  try {
-    const allStorageKeys = [
-      CLIENTS_KEY, CASES_KEY, PAYMENTS_KEY, BILLS_KEY, APPEARANCES_KEY,
-      EXPENSE_HEADS_KEY, EXPENSES_KEY, REMINDERS_KEY, WAITING_LIST_KEY,
-      ANNOUNCEMENTS_KEY, CONSULTANCY_KEY, EXTRA_BRIEFS_KEY, DOCUMENTS_META_KEY
-    ]
-    allStorageKeys.forEach((k) => {
-      const raw = localStorage.getItem(k)
-      if (raw && DUMMY_MARKERS.some((m) => raw.includes(m))) {
-        try {
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed)) {
-            const cleaned = parsed.filter((item) => !isDummyItem(item))
-            localStorage.setItem(k, JSON.stringify(cleaned))
-          }
-        } catch (e) {
-          localStorage.removeItem(k)
-        }
-      }
-    })
-  } catch (e) {}
-}
-
-// ----------------- Memory Store & Helper: Read & Write JSON -----------------
+// ----------------- Memory Store & Fast In-Memory Cache -----------------
 const memoryStore = {
   [CLIENTS_KEY]: null,
   [CASES_KEY]: null,
@@ -178,29 +139,29 @@ const memoryStore = {
   [EXPENSES_KEY]: null,
   [WAITING_LIST_KEY]: null,
   [ANNOUNCEMENTS_KEY]: null,
+  [CONSULTANCY_KEY]: null,
+  [EXTRA_BRIEFS_KEY]: null,
+  [DOCUMENTS_META_KEY]: null,
   overview: null,
 }
 
 function readStorage(key, seedValue) {
-  if (memoryStore[key] && Array.isArray(memoryStore[key]) && memoryStore[key].length > 0) {
+  // 1. Instant O(1) memory lookup
+  if (memoryStore[key] !== null && memoryStore[key] !== undefined) {
     return memoryStore[key]
   }
+  // 2. Read from LocalStorage once, cache in memory
   try {
     const raw = localStorage.getItem(key)
     if (!raw) {
+      memoryStore[key] = seedValue
       return seedValue
     }
-    let parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) {
-      const filtered = parsed.filter((item) => !isDummyItem(item))
-      if (filtered.length !== parsed.length) {
-        try { localStorage.setItem(key, JSON.stringify(filtered)) } catch (e) {}
-        parsed = filtered
-      }
-    }
-    return Array.isArray(parsed) || typeof parsed === 'object' ? parsed : seedValue
+    const parsed = JSON.parse(raw)
+    memoryStore[key] = parsed
+    return parsed
   } catch (err) {
-    console.warn(`Storage read error for ${key}:`, err)
+    memoryStore[key] = seedValue
     return seedValue
   }
 }
@@ -211,7 +172,6 @@ function writeStorage(key, data) {
     localStorage.setItem(key, JSON.stringify(data))
   } catch (err) {
     // Quota reached; data remains preserved in memoryStore
-    console.warn(`LocalStorage write skipped for ${key} (cached in memory)`)
   }
   dispatchStorageEvent()
 }
@@ -1650,50 +1610,16 @@ export function importDatabaseFromJSON(jsonString) {
 
 
 // =====================================================================
-// LIVE BACKEND SYNCHRONIZATION & DUMMY DATA PURGE
-// Synchronizes frontend LocalStorage cache with MySQL legalcase_db
+// LIVE BACKEND SYNCHRONIZATION
+// Synchronizes frontend memory cache with MySQL legalcase_db
 // =====================================================================
 let isSyncing = false
-const PURGE_FLAG_KEY = 'legalcase_clean_v6_purged'
 
 export async function initStorageSync() {
   if (typeof window === 'undefined' || isSyncing) return
   isSyncing = true
 
-  const allKeys = [
-    CLIENTS_KEY, CASES_KEY, PAYMENTS_KEY, BILLS_KEY, APPEARANCES_KEY,
-    EXPENSE_HEADS_KEY, EXPENSES_KEY, REMINDERS_KEY, WAITING_LIST_KEY,
-    ANNOUNCEMENTS_KEY, CONSULTANCY_KEY, EXTRA_BRIEFS_KEY, DOCUMENTS_META_KEY
-  ]
-
-  // 1. One-time clean sweep of legacy dummy data from localStorage
-  if (localStorage.getItem(PURGE_FLAG_KEY) !== 'true') {
-    allKeys.forEach((k) => {
-      try {
-        localStorage.removeItem(k)
-      } catch (e) {}
-    })
-    localStorage.removeItem('legalcase_practice_overview')
-    localStorage.setItem(PURGE_FLAG_KEY, 'true')
-    dispatchStorageEvent()
-  }
-
-  // 2. Extra safety: Purge any key containing known dummy seed signatures
-  const dummyMarkers = [
-    'Rajesh Kumar Sharma', 'GR - 175/14', 'W-501', 'ANN-101', 'Sunita Devi',
-    'Nirmal Chandra Patra', 'Madhabi Giri', 'Subhendu Ghosh', 'CF-5001',
-    'EB-8001', 'Debashis Roy Chowdhury', 'Gour Mohan Pramanik'
-  ]
-  allKeys.forEach((k) => {
-    try {
-      const raw = localStorage.getItem(k)
-      if (raw && dummyMarkers.some((m) => raw.includes(m))) {
-        localStorage.removeItem(k)
-      }
-    } catch (e) {}
-  })
-
-  // 3. Immediately fetch live overview metrics from MySQL legalcase_db
+  // 1. Instantly fetch live overview metrics from MySQL legalcase_db
   try {
     const overviewRes = await api.getOverview()
     if (overviewRes && overviewRes.success && overviewRes.data) {

@@ -22,19 +22,31 @@
   flex-direction: column;
 }
 
-/* Dashboard Specific Background Image */
+/* Dashboard Specific Background Image — Hardware Accelerated with Zero Repaint Lag */
 .dashboard-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-color: #f1f5f9;
+}
+
+.dashboard-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
   background-image: url('/DashboardImage.png');
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  pointer-events: none;
+  z-index: 0;
+  transform: translateZ(0);
 }
 
 .dashboard-page .dash-body-layout {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 1;
   min-width: 0;
