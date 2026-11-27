@@ -578,195 +578,10 @@ export default function CaseManagement() {
   return (
     <>
 
-        <main className="dash mgmt-page">
-          {/* Breadcrumb Navigation */}
-          <div className="crumbs">
-            <button className="crumbs-link" onClick={() => navigate('/dashboard')}>
-              <ArrowLeft size={13} />
-              <span>Dashboard</span>
-            </button>
-            <ChevronRight size={12} className="crumbs-sep" />
-            <span className="crumbs-muted">Case Operations</span>
-            <ChevronRight size={12} className="crumbs-sep" />
-            <b className="crumbs-active">Case Master Management</b>
-          </div>
-
-          {/* Header Bar */}
-          <div className="mgmt-header">
-            <div className="mgmt-header-left">
-              <span className="mgmt-icon-badge case-badge">
-                <Briefcase size={20} strokeWidth={2.2} />
-              </span>
-              <div>
-                <div className="mgmt-tag-row">
-                  <span className="tag-blue">Case Master Module</span>
-                  <span className="tag-muted">{cases.length} Registered Cases</span>
-                </div>
-                <h1 className="mgmt-title">Case Master Management</h1>
-                <p className="mgmt-desc">Register court cases, track hearing dates, police stations &amp; manage bulk imports</p>
-              </div>
-            </div>
-
-            {/* Header Actions: Dashboard, Export, Import, and View Switcher */}
-            <div className="mgmt-header-actions">
-              <button className="btn-secondary" onClick={() => navigate('/dashboard')} title="Back to dashboard">
-                <ArrowLeft size={14} />
-                <span>Dashboard</span>
-              </button>
-
-              <button className="btn-secondary btn-export" onClick={handleExportPDF} title="Export cases table to PDF">
-                <Download size={14} />
-                <span>Export</span>
-              </button>
-
-              <button className="btn-secondary btn-import" onClick={() => setShowImportModal(true)} title="Bulk import cases from CSV/Excel">
-                <Upload size={14} />
-                <span>Import Cases</span>
-              </button>
-
-              {activeView === 'form' ? (
-                <button
-                  className="btn-secondary"
-                  onClick={() => {
-                    setActiveView('table')
-                    setSearchParams({})
-                  }}
-                  title="View registered cases table"
-                  style={{ background: '#3b82f6', color: '#ffffff', borderColor: '#2563eb', fontWeight: '600' }}
-                >
-                  <Briefcase size={14} />
-                  <span>View Cases List ({cases.length})</span>
-                </button>
-              ) : (
-                <button
-                  className="btn-primary"
-                  onClick={() => {
-                    handleClear()
-                    setActiveView('form')
-                    setSearchParams({ action: 'new' })
-                    setTimeout(() => {
-                      caseNoInputRef.current?.focus()
-                    }, 50)
-                  }}
-                  title="Open new case registration form"
-                >
-                  <FolderPlus size={14} />
-                  <span>+ New Case</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Mode Switcher Tabs */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '16px',
-            flexWrap: 'wrap',
-            gap: '12px'
-          }}>
-            <div style={{
-              display: 'inline-flex',
-              background: '#f1f5f9',
-              border: '1px solid #e2e8f0',
-              padding: '4px',
-              borderRadius: '10px',
-              gap: '4px'
-            }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveView('table')
-                  setSearchParams({})
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 16px',
-                  borderRadius: '7px',
-                  fontSize: '12.5px',
-                  fontWeight: activeView === 'table' ? '700' : '500',
-                  background: activeView === 'table' ? '#ffffff' : 'transparent',
-                  color: activeView === 'table' ? '#1e293b' : '#64748b',
-                  border: activeView === 'table' ? '1px solid #cbd5e1' : 'none',
-                  boxShadow: activeView === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Briefcase size={14} color={activeView === 'table' ? '#2563eb' : 'currentColor'} />
-                <span>All Registered Cases ({cases.length})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  handleClear()
-                  setActiveView('form')
-                  setSearchParams({ action: 'new' })
-                  setTimeout(() => {
-                    caseNoInputRef.current?.focus()
-                  }, 50)
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 16px',
-                  borderRadius: '7px',
-                  fontSize: '12.5px',
-                  fontWeight: activeView === 'form' ? '700' : '500',
-                  background: activeView === 'form' ? '#ffffff' : 'transparent',
-                  color: activeView === 'form' ? '#1e293b' : '#64748b',
-                  border: activeView === 'form' ? '1px solid #cbd5e1' : 'none',
-                  boxShadow: activeView === 'form' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <FolderPlus size={14} color={activeView === 'form' ? '#2563eb' : 'currentColor'} />
-                <span>{selectedCaseId ? `Edit Case (${formData.caseNumber || selectedCaseId})` : '+ New Case Registration Form'}</span>
-              </button>
-            </div>
-
-            {activeView === 'table' ? (
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => {
-                  handleClear()
-                  setActiveView('form')
-                  setSearchParams({ action: 'new' })
-                  setTimeout(() => {
-                    caseNoInputRef.current?.focus()
-                  }, 50)
-                }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontSize: '12.5px' }}
-              >
-                <FolderPlus size={14} />
-                <span>+ Register New Case</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setActiveView('table')
-                  setSearchParams({})
-                }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontSize: '12.5px' }}
-              >
-                <ArrowLeft size={14} />
-                <span>Back to Cases List</span>
-              </button>
-            )}
-          </div>
-
+        <main className="dash mgmt-page" style={{ padding: '14px 20px', gap: '10px' }}>
           {/* Toast Notification */}
           {toast && (
-            <div className={`mgmt-toast toast-${toast.type}`}>
+            <div className={`mgmt-toast toast-${toast.type}`} style={{ marginBottom: '6px' }}>
               {toast.type === 'success' && <CheckCircle2 size={16} />}
               {toast.type === 'error' && <AlertCircle size={16} />}
               {toast.type === 'info' && <CheckCircle2 size={16} />}
@@ -776,361 +591,529 @@ export default function CaseManagement() {
 
           {/* Conditional Layout: Form View OR Table View */}
           {activeView === 'form' ? (
-            <div style={{ maxWidth: '960px', margin: '0 auto', width: '100%' }}>
-              <div className="mgmt-form-panel" ref={formPanelRef} style={{ width: '100%', borderRadius: '12px' }}>
-                <div className="panel-card-head">
-                <div className="pch-title">
-                  <span className="pch-dot pch-violet" />
-                  <h3>{selectedCaseId ? `Edit Case (${selectedCaseId} — ${formData.caseNumber || ''})` : 'New Case Registration'}</h3>
-                </div>
-                {selectedCaseId ? (
-                  <span className="status-badge editing">Editing Case</span>
-                ) : (
-                  <span className="status-badge creating">Unique Case ID Auto-Generated</span>
-                )}
-              </div>
-
-              <form className="mgmt-form" onSubmit={(e) => e.preventDefault()} style={{ gap: '12px', padding: '16px' }}>
-                <div className="form-row-2">
-                  <div className="form-field">
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Case Number <span className="req" style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <div className="input-with-icon">
-                      <Hash size={13} className="input-ic" />
-                      <input
-                        ref={caseNoInputRef}
-                        type="text"
-                        name="caseNumber"
-                        placeholder="e.g. GR - 175/14 or CR/342/26"
-                        className={`form-input ${errors.caseNumber ? 'input-err' : ''}`}
-                        value={formData.caseNumber}
-                        onChange={handleChange}
-                      />
-                    </div>
-                    {errors.caseNumber && <span className="err-msg">{errors.caseNumber}</span>}
-                  </div>
-
-                  <div className="form-field">
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Court Name <span className="req" style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <div className="input-with-icon">
-                      <Building2 size={13} className="input-ic" />
-                      <input
-                        type="text"
-                        name="courtName"
-                        placeholder="e.g. III - JM, ACJM Contai"
-                        className={`form-input ${errors.courtName ? 'input-err' : ''}`}
-                        value={formData.courtName}
-                        onChange={handleChange}
-                      />
-                    </div>
-                    {errors.courtName && <span className="err-msg">{errors.courtName}</span>}
-                  </div>
-                </div>
-
-                <div className="form-row-2">
-                  <div className="form-field" style={{ position: 'relative' }}>
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Registered Client
-                      {formData.clientId && <span style={{ marginLeft: '4px', color: '#1d4ed8', fontWeight: '700' }}>({formData.clientId})</span>}
-                    </label>
-                    <div className="input-with-icon" style={{ position: 'relative' }}>
-                      <User size={13} className="input-ic" />
-                      <input
-                        type="text"
-                        placeholder="Search Client ID or Name..."
-                        value={clientSearchQuery || (formData.clientId ? `${formData.clientId} — ${formData.clientName}` : formData.clientName)}
-                        onChange={(e) => {
-                          setClientSearchQuery(e.target.value)
-                          setShowClientDropdown(true)
-                        }}
-                        onFocus={() => setShowClientDropdown(true)}
-                        className="form-input"
-                        style={{ paddingRight: (clientSearchQuery || formData.clientId) ? '24px' : '9px' }}
-                      />
-                      {(clientSearchQuery || formData.clientId) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormData((prev) => ({ ...prev, clientId: '', clientName: '', phone: '' }))
-                            setClientSearchQuery('')
-                            setShowClientDropdown(false)
-                          }}
-                          style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '13px' }}
-                          title="Clear client selection"
-                        >✕</button>
-                      )}
-                    </div>
-                    {showClientDropdown && (
-                      <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', zIndex: 40, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', boxShadow: '0 8px 16px rgba(0,0,0,0.1)', maxHeight: '180px', overflowY: 'auto', marginTop: '2px' }}>
-                        {clients.filter((c) => {
-                          const q = (clientSearchQuery || '').toLowerCase()
-                          return !q || c.id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q))
-                        }).length === 0 ? (
-                          <div style={{ padding: '8px 12px', fontSize: '12px', color: '#94a3b8' }}>No matching clients found</div>
-                        ) : (
-                          clients.filter((c) => {
-                            const q = (clientSearchQuery || '').toLowerCase()
-                            return !q || c.id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q))
-                          }).slice(0, 10).map((c) => (
-                            <div
-                              key={c.id}
-                              onClick={() => {
-                                setFormData((prev) => ({ ...prev, clientId: c.id, clientName: c.name, phone: c.phone || '' }))
-                                setClientSearchQuery(`${c.id} — ${c.name}`)
-                                setShowClientDropdown(false)
-                              }}
-                              style={{ padding: '6px 10px', fontSize: '12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
-                            >
-                              <div style={{ fontWeight: '600', color: '#1e293b' }}>{c.name} <span style={{ color: '#2563eb', fontSize: '11px' }}>({c.id})</span></div>
-                              {c.phone && <div style={{ fontSize: '11px', color: '#64748b' }}>Ph: {c.phone}</div>}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="form-field">
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Opposite Party (Versus)
-                    </label>
-                    <div className="input-with-icon">
-                      <User size={13} className="input-ic" />
-                      <input
-                        type="text"
-                        name="vsName"
-                        placeholder="e.g. State of West Bengal / Bimal Roy"
-                        className="form-input"
-                        value={formData.vsName}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-row-2">
-                  <div className="form-field">
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Under Section (U/S)
-                    </label>
-                    <div className="input-with-icon">
-                      <Scale size={13} className="input-ic" />
-                      <input
-                        type="text"
-                        name="underSection"
-                        placeholder="e.g. 302/34 IPC or 138 NI Act"
-                        className="form-input"
-                        value={formData.underSection}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-field">
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Hearing Stage / Purpose <span className="req" style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <div className="input-with-icon">
-                      <Gavel size={13} className="input-ic" />
-                      <input
-                        type="text"
-                        name="purpose"
-                        placeholder="e.g. Bail, Scrutiny, Argument"
-                        className="form-input"
-                        value={formData.purpose}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-row-2">
-                  <div className="form-field">
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Next Hearing Date <span className="req" style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="date"
-                      name="nextDate"
-                      className={`form-input ${errors.nextDate ? 'input-err' : ''}`}
-                      value={formData.nextDate}
-                      onChange={handleChange}
-                    />
-                    {errors.nextDate && <span className="err-msg">{errors.nextDate}</span>}
-                  </div>
-
-                  <div className="form-field">
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Case Filing Date
-                    </label>
-                    <input
-                      type="date"
-                      name="startDate"
-                      className="form-input"
-                      value={formData.startDate}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-field">
-                  <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                    Police Station &amp; PS Case No.
-                  </label>
-                  <div className="input-with-icon">
-                    <MapPin size={13} className="input-ic" />
-                    <input
-                      type="text"
-                      name="psCaseNumber"
-                      placeholder="e.g. CONTAI PS - 42/14"
-                      className="form-input"
-                      value={formData.psCaseNumber}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row-2">
-                  <div className="form-field">
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Chamber Rack No.
-                    </label>
-                    <input
-                      type="text"
-                      name="rackNo"
-                      placeholder="e.g. R-1"
-                      className="form-input"
-                      value={formData.rackNo}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="form-field">
-                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
-                      Chamber Room No.
-                    </label>
-                    <input
-                      type="text"
-                      name="roomNo"
-                      placeholder="e.g. Rm-2"
-                      className="form-input"
-                      value={formData.roomNo}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-
-                {/* Form Action Buttons: Save & View, Update & View, Clear, Cancel */}
-                <div
-                  className="form-actions"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    paddingTop: '12px',
-                    borderTop: '1px solid #f1f5f9',
-                    marginTop: '8px',
-                    flexWrap: 'wrap'
-                  }}
-                >
-                  {!selectedCaseId ? (
-                    <button
-                      type="button"
-                      className="act-btn btn-save"
-                      onClick={handleSave}
-                      disabled={loading}
-                      title="Save case and view registered cases table"
-                      style={{
-                        flex: 1, minWidth: '220px', height: '42px', display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', gap: '7px', fontWeight: '700', fontSize: '13px'
-                      }}
-                    >
-                      <Save size={15} />
-                      <span>SAVE &amp; VIEW REGISTERED CASES</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="act-btn btn-save"
-                      onClick={handleUpdate}
-                      disabled={loading}
-                      title="Update case and view registered cases table"
-                      style={{
-                        flex: 1, minWidth: '220px', height: '42px', display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', gap: '7px', fontWeight: '700', fontSize: '13px',
-                        background: '#059669', borderColor: '#047857'
-                      }}
-                    >
-                      <Save size={15} />
-                      <span>UPDATE &amp; VIEW CASES</span>
-                    </button>
-                  )}
-
+            <div style={{ maxWidth: '1180px', margin: '0 auto', width: '100%' }}>
+              {/* Sleek Form Header Strip */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '10px',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <button
                     type="button"
-                    className="act-btn btn-clear"
-                    onClick={handleClear}
-                    title="Clear form fields"
-                    style={{ height: '42px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <XCircle size={15} />
-                    <span>Clear</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="act-btn"
+                    className="btn-secondary"
                     onClick={() => {
                       setActiveView('table')
                       setSearchParams({})
                     }}
-                    title="Cancel and view registered cases table"
                     style={{
-                      height: '42px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px',
-                      background: '#f8fafc', color: '#475569', borderColor: '#cbd5e1'
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 12px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
                     }}
+                    title="Back to all cases list"
                   >
-                    <ArrowLeft size={15} />
-                    <span>Cancel / View List</span>
+                    <ArrowLeft size={13} />
+                    <span>Back to Cases List</span>
                   </button>
 
-                  {selectedCaseId && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="mgmt-icon-badge case-badge" style={{ width: '28px', height: '28px', borderRadius: '6px' }}>
+                      <Briefcase size={15} strokeWidth={2.2} />
+                    </span>
+                    <h1 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                      {selectedCaseId ? `Edit Case (${selectedCaseId} — ${formData.caseNumber || ''})` : 'New Case Registration'}
+                    </h1>
+                    <span className={`status-badge ${selectedCaseId ? 'editing' : 'creating'}`} style={{ fontSize: '10px', padding: '2px 8px' }}>
+                      {selectedCaseId ? 'Editing Case' : 'Auto-Generated Case ID'}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setActiveView('table')
+                    setSearchParams({})
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    fontSize: '12px',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px'
+                  }}
+                >
+                  <Briefcase size={13} />
+                  <span>View All Cases ({cases.length})</span>
+                </button>
+              </div>
+
+              {/* Compact Single-Screen Form Card */}
+              <div className="mgmt-form-panel" ref={formPanelRef} style={{ width: '100%', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                <form className="mgmt-form" onSubmit={(e) => e.preventDefault()} style={{ gap: '10px', padding: '16px 20px' }}>
+                  
+                  {/* Row 1: Case Number (req), Court Name (req), Hearing Stage/Purpose (req) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '12px' }}>
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Case Number <span className="req" style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <div className="input-with-icon">
+                        <Hash size={13} className="input-ic" />
+                        <input
+                          ref={caseNoInputRef}
+                          type="text"
+                          name="caseNumber"
+                          placeholder="e.g. GR - 175/14 or CR/342/26"
+                          className={`form-input ${errors.caseNumber ? 'input-err' : ''}`}
+                          value={formData.caseNumber}
+                          onChange={handleChange}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+                      {errors.caseNumber && <span className="err-msg" style={{ fontSize: '10px' }}>{errors.caseNumber}</span>}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Court Name <span className="req" style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <div className="input-with-icon">
+                        <Building2 size={13} className="input-ic" />
+                        <input
+                          type="text"
+                          name="courtName"
+                          placeholder="e.g. III - JM, ACJM Contai"
+                          className={`form-input ${errors.courtName ? 'input-err' : ''}`}
+                          value={formData.courtName}
+                          onChange={handleChange}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+                      {errors.courtName && <span className="err-msg" style={{ fontSize: '10px' }}>{errors.courtName}</span>}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Hearing Stage / Purpose <span className="req" style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <div className="input-with-icon">
+                        <Gavel size={13} className="input-ic" />
+                        <input
+                          type="text"
+                          name="purpose"
+                          placeholder="e.g. Bail / Scrutiny"
+                          className="form-input"
+                          value={formData.purpose}
+                          onChange={handleChange}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Registered Client, Opposite Party (Versus), Under Section */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: '12px' }}>
+                    <div className="form-field" style={{ position: 'relative' }}>
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Registered Client {formData.clientId && <span style={{ marginLeft: '4px', color: '#2563eb', fontWeight: '700' }}>({formData.clientId})</span>}
+                      </label>
+                      <div className="input-with-icon" style={{ position: 'relative' }}>
+                        <User size={13} className="input-ic" />
+                        <input
+                          type="text"
+                          placeholder="Search Client ID or Name..."
+                          value={clientSearchQuery || (formData.clientId ? `${formData.clientId} — ${formData.clientName}` : formData.clientName)}
+                          onChange={(e) => {
+                            setClientSearchQuery(e.target.value)
+                            setShowClientDropdown(true)
+                          }}
+                          onFocus={() => setShowClientDropdown(true)}
+                          className="form-input"
+                          style={{ height: '34px', fontSize: '12px', paddingRight: (clientSearchQuery || formData.clientId) ? '24px' : '9px' }}
+                        />
+                        {(clientSearchQuery || formData.clientId) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData((prev) => ({ ...prev, clientId: '', clientName: '', phone: '' }))
+                              setClientSearchQuery('')
+                              setShowClientDropdown(false)
+                            }}
+                            style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '12px' }}
+                            title="Clear client selection"
+                          >✕</button>
+                        )}
+                      </div>
+                      {showClientDropdown && (
+                        <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', zIndex: 50, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', boxShadow: '0 8px 16px rgba(0,0,0,0.12)', maxHeight: '160px', overflowY: 'auto', marginTop: '2px' }}>
+                          {clients.filter((c) => {
+                            const q = (clientSearchQuery || '').toLowerCase()
+                            return !q || c.id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q))
+                          }).length === 0 ? (
+                            <div style={{ padding: '8px 12px', fontSize: '12px', color: '#94a3b8' }}>No matching clients found</div>
+                          ) : (
+                            clients.filter((c) => {
+                              const q = (clientSearchQuery || '').toLowerCase()
+                              return !q || c.id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q))
+                            }).slice(0, 10).map((c) => (
+                              <div
+                                key={c.id}
+                                onClick={() => {
+                                  setFormData((prev) => ({ ...prev, clientId: c.id, clientName: c.name, phone: c.phone || '' }))
+                                  setClientSearchQuery(`${c.id} — ${c.name}`)
+                                  setShowClientDropdown(false)
+                                }}
+                                style={{ padding: '6px 10px', fontSize: '12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
+                              >
+                                <div style={{ fontWeight: '600', color: '#1e293b' }}>{c.name} <span style={{ color: '#2563eb', fontSize: '11px' }}>({c.id})</span></div>
+                                {c.phone && <div style={{ fontSize: '11px', color: '#64748b' }}>Ph: {c.phone}</div>}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Opposite Party (Versus)
+                      </label>
+                      <div className="input-with-icon">
+                        <User size={13} className="input-ic" />
+                        <input
+                          type="text"
+                          name="vsName"
+                          placeholder="e.g. State of West Bengal / Bimal Roy"
+                          className="form-input"
+                          value={formData.vsName}
+                          onChange={handleChange}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Under Section (U/S)
+                      </label>
+                      <div className="input-with-icon">
+                        <Scale size={13} className="input-ic" />
+                        <input
+                          type="text"
+                          name="underSection"
+                          placeholder="e.g. 302/34 IPC or 138 NI Act"
+                          className="form-input"
+                          value={formData.underSection}
+                          onChange={handleChange}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Next Hearing Date, Filing Date, Chamber Rack, Chamber Room */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Next Hearing Date <span className="req" style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="nextDate"
+                        className={`form-input ${errors.nextDate ? 'input-err' : ''}`}
+                        value={formData.nextDate}
+                        onChange={handleChange}
+                        style={{ height: '34px', fontSize: '12px' }}
+                      />
+                      {errors.nextDate && <span className="err-msg" style={{ fontSize: '10px' }}>{errors.nextDate}</span>}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Case Filing Date
+                      </label>
+                      <input
+                        type="date"
+                        name="startDate"
+                        className="form-input"
+                        value={formData.startDate}
+                        onChange={handleChange}
+                        style={{ height: '34px', fontSize: '12px' }}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Chamber Rack No.
+                      </label>
+                      <input
+                        type="text"
+                        name="rackNo"
+                        placeholder="e.g. R-1"
+                        className="form-input"
+                        value={formData.rackNo}
+                        onChange={handleChange}
+                        style={{ height: '34px', fontSize: '12px' }}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Chamber Room No.
+                      </label>
+                      <input
+                        type="text"
+                        name="roomNo"
+                        placeholder="e.g. Rm-2"
+                        className="form-input"
+                        value={formData.roomNo}
+                        onChange={handleChange}
+                        style={{ height: '34px', fontSize: '12px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 4: Police Station & PS Case No., Client Phone, Brief Remarks/Notes */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.8fr', gap: '12px' }}>
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Police Station &amp; PS Case No.
+                      </label>
+                      <div className="input-with-icon">
+                        <MapPin size={13} className="input-ic" />
+                        <input
+                          type="text"
+                          name="psCaseNumber"
+                          placeholder="e.g. CONTAI PS - 42/14"
+                          className="form-input"
+                          value={formData.psCaseNumber}
+                          onChange={handleChange}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Client Mobile Phone
+                      </label>
+                      <div className="input-with-icon">
+                        <Phone size={13} className="input-ic" />
+                        <input
+                          type="tel"
+                          name="phone"
+                          placeholder="e.g. 9876543210"
+                          className="form-input"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: '600', color: '#334155', marginBottom: '3px' }}>
+                        Brief Case Notes / Remarks
+                      </label>
+                      <input
+                        type="text"
+                        name="notes"
+                        placeholder="Add brief notes or remarks..."
+                        className="form-input"
+                        value={formData.notes}
+                        onChange={handleChange}
+                        style={{ height: '34px', fontSize: '12px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 5: Action Buttons */}
+                  <div
+                    className="form-actions"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      paddingTop: '10px',
+                      borderTop: '1px solid #f1f5f9',
+                      marginTop: '4px'
+                    }}
+                  >
+                    {!selectedCaseId ? (
+                      <button
+                        type="button"
+                        className="act-btn btn-save"
+                        onClick={handleSave}
+                        disabled={loading}
+                        title="Save case and view registered cases table"
+                        style={{
+                          flex: 1, height: '38px', display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', gap: '8px', fontWeight: '700', fontSize: '13px',
+                          background: '#2563eb', color: '#ffffff', borderRadius: '6px'
+                        }}
+                      >
+                        <Save size={15} />
+                        <span>SAVE &amp; VIEW REGISTERED CASES</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="act-btn btn-save"
+                        onClick={handleUpdate}
+                        disabled={loading}
+                        title="Update case and view registered cases table"
+                        style={{
+                          flex: 1, height: '38px', display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', gap: '8px', fontWeight: '700', fontSize: '13px',
+                          background: '#059669', color: '#ffffff', borderColor: '#047857', borderRadius: '6px'
+                        }}
+                      >
+                        <Save size={15} />
+                        <span>UPDATE &amp; VIEW CASES</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="act-btn btn-clear"
+                      onClick={handleClear}
+                      title="Clear form fields"
+                      style={{ height: '38px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '6px' }}
+                    >
+                      <XCircle size={15} />
+                      <span>Clear</span>
+                    </button>
+
                     <button
                       type="button"
                       className="act-btn"
-                      onClick={() => promptDeleteCase(selectedCase)}
-                      disabled={loading}
-                      title="Delete case"
+                      onClick={() => {
+                        setActiveView('table')
+                        setSearchParams({})
+                      }}
+                      title="Cancel and view registered cases table"
                       style={{
-                        height: '42px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '5px',
-                        background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5'
+                        height: '38px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px',
+                        background: '#f8fafc', color: '#475569', borderColor: '#cbd5e1', borderRadius: '6px'
                       }}
                     >
-                      <Trash2 size={15} />
-                      <span>Delete</span>
+                      <ArrowLeft size={15} />
+                      <span>Cancel / View List</span>
                     </button>
-                  )}
 
-                  {selectedCaseId && (
-                    <button
-                      type="button"
-                      className="act-btn btn-print"
-                      onClick={handlePrint}
-                      title="Print case docket"
-                      style={{ height: '42px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '5px' }}
-                    >
-                      <Printer size={15} />
-                      <span>Print</span>
-                    </button>
-                  )}
-                </div>
-              </form>
+                    {selectedCaseId && (
+                      <button
+                        type="button"
+                        className="act-btn"
+                        onClick={() => promptDeleteCase(selectedCase)}
+                        disabled={loading}
+                        title="Delete case"
+                        style={{
+                          height: '38px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '5px',
+                          background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5', borderRadius: '6px'
+                        }}
+                      >
+                        <Trash2 size={15} />
+                        <span>Delete</span>
+                      </button>
+                    )}
+
+                    {selectedCaseId && (
+                      <button
+                        type="button"
+                        className="act-btn btn-print"
+                        onClick={handlePrint}
+                        title="Print case docket"
+                        style={{ height: '38px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '5px', borderRadius: '6px' }}
+                      >
+                        <Printer size={15} />
+                        <span>Print</span>
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
             </div>
-          </div>
-        ) : (
+          ) : (
+            <div style={{ width: '100%' }}>
+              {/* Breadcrumb Navigation */}
+              <div className="crumbs">
+                <button className="crumbs-link" onClick={() => navigate('/dashboard')}>
+                  <ArrowLeft size={13} />
+                  <span>Dashboard</span>
+                </button>
+                <ChevronRight size={12} className="crumbs-sep" />
+                <span className="crumbs-muted">Case Operations</span>
+                <ChevronRight size={12} className="crumbs-sep" />
+                <b className="crumbs-active">Case Master Management</b>
+              </div>
+
+              {/* Header Bar */}
+              <div className="mgmt-header">
+                <div className="mgmt-header-left">
+                  <span className="mgmt-icon-badge case-badge">
+                    <Briefcase size={20} strokeWidth={2.2} />
+                  </span>
+                  <div>
+                    <div className="mgmt-tag-row">
+                      <span className="tag-blue">Case Master Module</span>
+                      <span className="tag-muted">{cases.length} Registered Cases</span>
+                    </div>
+                    <h1 className="mgmt-title">Case Master Management</h1>
+                    <p className="mgmt-desc">Register court cases, track hearing dates, police stations &amp; manage bulk imports</p>
+                  </div>
+                </div>
+
+                {/* Header Actions: Dashboard, Export, Import, and New Case Registration */}
+                <div className="mgmt-header-actions">
+                  <button className="btn-secondary" onClick={() => navigate('/dashboard')} title="Back to dashboard">
+                    <ArrowLeft size={14} />
+                    <span>Dashboard</span>
+                  </button>
+
+                  <button className="btn-secondary btn-export" onClick={handleExportPDF} title="Export cases table to PDF">
+                    <Download size={14} />
+                    <span>Export</span>
+                  </button>
+
+                  <button className="btn-secondary btn-import" onClick={() => setShowImportModal(true)} title="Bulk import cases from CSV/Excel">
+                    <Upload size={14} />
+                    <span>Import Cases</span>
+                  </button>
+
+                  <button
+                    className="btn-primary"
+                    onClick={() => {
+                      handleClear()
+                      setActiveView('form')
+                      setSearchParams({ action: 'new' })
+                      setTimeout(() => {
+                        caseNoInputRef.current?.focus()
+                      }, 50)
+                    }}
+                    title="Open new case registration form"
+                  >
+                    <FolderPlus size={14} />
+                    <span>+ New Case</span>
+                  </button>
+                </div>
+              </div>
           <div className="mgmt-table-panel" style={{ width: '100%', borderRadius: '12px' }}>
               <div className="panel-card-head">
                 <div className="pch-title">
@@ -1279,7 +1262,8 @@ export default function CaseManagement() {
                 }}
               />
             </div>
-          )}
+          </div>
+        )}
 
           {/* ================= BULK IMPORT MODAL ================= */}
           {showImportModal && (
