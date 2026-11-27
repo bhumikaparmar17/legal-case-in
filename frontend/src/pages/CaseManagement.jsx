@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Briefcase, FolderPlus, Save, RefreshCw, Printer, XCircle, Search,
   Calendar, Building2, Gavel, ArrowLeft, CheckCircle2,
   AlertCircle, ChevronRight, Hash, Phone, User, Trash2, Eye,
-  Download, Upload, FileSpreadsheet, MapPin, Scale, Check, Layers
+  Download, Upload, FileSpreadsheet, MapPin, Scale, Check, Layers, Edit3
 } from 'lucide-react'
 import Pagination from '../components/Pagination.jsx'
 import { OFFICE } from '../data/menu.js'
@@ -17,10 +17,23 @@ import './management.css'
 
 export default function CaseManagement() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const isNewParam = searchParams.get('action') === 'new'
+  const [activeView, setActiveView] = useState(() => (isNewParam ? 'form' : 'table'))
   const fileInputRef = useRef(null)
   const formPanelRef = useRef(null)
   const caseNoInputRef = useRef(null)
   const [hoveredBtn, setHoveredBtn] = useState(null)
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      setActiveView('form')
+      handleClear()
+      setTimeout(() => {
+        caseNoInputRef.current?.focus()
+      }, 100)
+    }
+  }, [searchParams])
 
   const [clients, setClients] = useState(() => getClients())
   const [cases, setCases] = useState(() => getCases())
@@ -124,7 +137,7 @@ export default function CaseManagement() {
   }
 
   // Select a case from the table for editing
-  const handleSelectCase = (cs) => {
+  const handleSelectCase = (cs, openForm = false) => {
     setSelectedCaseId(cs.id)
     setFormData({
       clientId: cs.clientId || '',
@@ -148,6 +161,10 @@ export default function CaseManagement() {
     })
     setErrors({})
     showToast('info', `Selected Case: ${cs.caseNumber || cs.caseNo || cs.id}`)
+    if (openForm) {
+      setActiveView('form')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
   // Clear form
@@ -185,6 +202,9 @@ export default function CaseManagement() {
         const saved = saveCase(payload)
         setSelectedCaseId(saved.id)
         showToast('success', `Case ${saved.caseNumber || saved.caseNo} registered successfully!`)
+        // Redirect to Data Show (table view) immediately
+        setActiveView('table')
+        setSearchParams({})
       } catch (err) {
         showToast('error', err.message || 'Failed to save case.')
       } finally {
@@ -222,6 +242,9 @@ export default function CaseManagement() {
         }
         const updated = updateCase(selectedCaseId, payload)
         showToast('success', `Case ${updated.id} (${updated.caseNumber || updated.caseNo}) updated successfully!`)
+        // Redirect to Data Show (table view) immediately
+        setActiveView('table')
+        setSearchParams({})
       } catch (err) {
         showToast('error', err.message || 'Failed to update case.')
       } finally {
@@ -584,7 +607,7 @@ export default function CaseManagement() {
               </div>
             </div>
 
-            {/* Header Actions: Dashboard, Export, Import, and New Case Registration */}
+            {/* Header Actions: Dashboard, Export, Import, and View Switcher */}
             <div className="mgmt-header-actions">
               <button className="btn-secondary" onClick={() => navigate('/dashboard')} title="Back to dashboard">
                 <ArrowLeft size={14} />
@@ -601,21 +624,144 @@ export default function CaseManagement() {
                 <span>Import Cases</span>
               </button>
 
+              {activeView === 'form' ? (
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    setActiveView('table')
+                    setSearchParams({})
+                  }}
+                  title="View registered cases table"
+                  style={{ background: '#3b82f6', color: '#ffffff', borderColor: '#2563eb', fontWeight: '600' }}
+                >
+                  <Briefcase size={14} />
+                  <span>View Cases List ({cases.length})</span>
+                </button>
+              ) : (
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    handleClear()
+                    setActiveView('form')
+                    setSearchParams({ action: 'new' })
+                    setTimeout(() => {
+                      caseNoInputRef.current?.focus()
+                    }, 50)
+                  }}
+                  title="Open new case registration form"
+                >
+                  <FolderPlus size={14} />
+                  <span>+ New Case</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Mode Switcher Tabs */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '16px',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              background: '#f1f5f9',
+              border: '1px solid #e2e8f0',
+              padding: '4px',
+              borderRadius: '10px',
+              gap: '4px'
+            }}>
               <button
-                className="btn-primary"
+                type="button"
+                onClick={() => {
+                  setActiveView('table')
+                  setSearchParams({})
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 16px',
+                  borderRadius: '7px',
+                  fontSize: '12.5px',
+                  fontWeight: activeView === 'table' ? '700' : '500',
+                  background: activeView === 'table' ? '#ffffff' : 'transparent',
+                  color: activeView === 'table' ? '#1e293b' : '#64748b',
+                  border: activeView === 'table' ? '1px solid #cbd5e1' : 'none',
+                  boxShadow: activeView === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Briefcase size={14} color={activeView === 'table' ? '#2563eb' : 'currentColor'} />
+                <span>All Registered Cases ({cases.length})</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   handleClear()
+                  setActiveView('form')
+                  setSearchParams({ action: 'new' })
                   setTimeout(() => {
-                    formPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                     caseNoInputRef.current?.focus()
                   }, 50)
                 }}
-                title="Register new case"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 16px',
+                  borderRadius: '7px',
+                  fontSize: '12.5px',
+                  fontWeight: activeView === 'form' ? '700' : '500',
+                  background: activeView === 'form' ? '#ffffff' : 'transparent',
+                  color: activeView === 'form' ? '#1e293b' : '#64748b',
+                  border: activeView === 'form' ? '1px solid #cbd5e1' : 'none',
+                  boxShadow: activeView === 'form' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
               >
-                <FolderPlus size={14} />
-                <span>New Case</span>
+                <FolderPlus size={14} color={activeView === 'form' ? '#2563eb' : 'currentColor'} />
+                <span>{selectedCaseId ? `Edit Case (${formData.caseNumber || selectedCaseId})` : '+ New Case Registration Form'}</span>
               </button>
             </div>
+
+            {activeView === 'table' ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  handleClear()
+                  setActiveView('form')
+                  setSearchParams({ action: 'new' })
+                  setTimeout(() => {
+                    caseNoInputRef.current?.focus()
+                  }, 50)
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontSize: '12.5px' }}
+              >
+                <FolderPlus size={14} />
+                <span>+ Register New Case</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setActiveView('table')
+                  setSearchParams({})
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontSize: '12.5px' }}
+              >
+                <ArrowLeft size={14} />
+                <span>Back to Cases List</span>
+              </button>
+            )}
           </div>
 
           {/* Toast Notification */}
@@ -628,11 +774,11 @@ export default function CaseManagement() {
             </div>
           )}
 
-          {/* Two-Panel Layout */}
-          <div className="mgmt-two-panel">
-            {/* ================= LEFT SIDE: STREAMLINED CASE FORM ================= */}
-            <div className="mgmt-form-panel" ref={formPanelRef}>
-              <div className="panel-card-head">
+          {/* Conditional Layout: Form View OR Table View */}
+          {activeView === 'form' ? (
+            <div style={{ maxWidth: '960px', margin: '0 auto', width: '100%' }}>
+              <div className="mgmt-form-panel" ref={formPanelRef} style={{ width: '100%', borderRadius: '12px' }}>
+                <div className="panel-card-head">
                 <div className="pch-title">
                   <span className="pch-dot pch-violet" />
                   <h3>{selectedCaseId ? `Edit Case (${selectedCaseId} — ${formData.caseNumber || ''})` : 'New Case Registration'}</h3>
@@ -877,50 +1023,78 @@ export default function CaseManagement() {
                   </div>
                 </div>
 
-                {/* Action Buttons Row */}
+                {/* Form Action Buttons: Save & View, Update & View, Clear, Cancel */}
                 <div
-                  className="mgmt-btn-bar"
+                  className="form-actions"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    marginTop: '6px'
+                    gap: '10px',
+                    paddingTop: '12px',
+                    borderTop: '1px solid #f1f5f9',
+                    marginTop: '8px',
+                    flexWrap: 'wrap'
                   }}
                 >
+                  {!selectedCaseId ? (
+                    <button
+                      type="button"
+                      className="act-btn btn-save"
+                      onClick={handleSave}
+                      disabled={loading}
+                      title="Save case and view registered cases table"
+                      style={{
+                        flex: 1, minWidth: '220px', height: '42px', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', gap: '7px', fontWeight: '700', fontSize: '13px'
+                      }}
+                    >
+                      <Save size={15} />
+                      <span>SAVE &amp; VIEW REGISTERED CASES</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="act-btn btn-save"
+                      onClick={handleUpdate}
+                      disabled={loading}
+                      title="Update case and view registered cases table"
+                      style={{
+                        flex: 1, minWidth: '220px', height: '42px', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', gap: '7px', fontWeight: '700', fontSize: '13px',
+                        background: '#059669', borderColor: '#047857'
+                      }}
+                    >
+                      <Save size={15} />
+                      <span>UPDATE &amp; VIEW CASES</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    className="act-btn btn-save"
-                    onClick={handleSave}
-                    disabled={loading || !!selectedCaseId}
-                    title={selectedCaseId ? 'Clear selection to create a new case' : 'Save case'}
-                    style={{ flex: 1, height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                    className="act-btn btn-clear"
+                    onClick={handleClear}
+                    title="Clear form fields"
+                    style={{ height: '42px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <Save size={14} />
-                    <span>SAVE</span>
+                    <XCircle size={15} />
+                    <span>Clear</span>
                   </button>
 
                   <button
                     type="button"
-                    className="act-btn btn-update"
-                    onClick={handleUpdate}
-                    disabled={loading || !selectedCaseId}
-                    title={!selectedCaseId ? 'Select a case from the table to update' : 'Update'}
-                    aria-label="Update"
-                    onMouseEnter={() => setHoveredBtn('update')}
-                    onMouseLeave={() => setHoveredBtn(null)}
-                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
+                    className="act-btn"
+                    onClick={() => {
+                      setActiveView('table')
+                      setSearchParams({})
+                    }}
+                    title="Cancel and view registered cases table"
+                    style={{
+                      height: '42px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px',
+                      background: '#f8fafc', color: '#475569', borderColor: '#cbd5e1'
+                    }}
                   >
-                    <RefreshCw size={15} />
-                    {hoveredBtn === 'update' && (
-                      <span style={{
-                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
-                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
-                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
-                      }}>
-                        Update
-                      </span>
-                    )}
+                    <ArrowLeft size={15} />
+                    <span>Cancel / View List</span>
                   </button>
 
                   {selectedCaseId && (
@@ -929,81 +1103,35 @@ export default function CaseManagement() {
                       className="act-btn"
                       onClick={() => promptDeleteCase(selectedCase)}
                       disabled={loading}
-                      title="Delete"
-                      aria-label="Delete"
-                      onMouseEnter={() => setHoveredBtn('delete')}
-                      onMouseLeave={() => setHoveredBtn(null)}
+                      title="Delete case"
                       style={{
-                        position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0,
+                        height: '42px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '5px',
                         background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5'
                       }}
                     >
                       <Trash2 size={15} />
-                      {hoveredBtn === 'delete' && (
-                        <span style={{
-                          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
-                          background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
-                          padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
-                          boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
-                        }}>
-                          Delete
-                        </span>
-                      )}
+                      <span>Delete</span>
                     </button>
                   )}
 
-                  <button
-                    type="button"
-                    className="act-btn btn-print"
-                    onClick={handlePrint}
-                    disabled={!selectedCaseId}
-                    title="Print"
-                    aria-label="Print"
-                    onMouseEnter={() => setHoveredBtn('print')}
-                    onMouseLeave={() => setHoveredBtn(null)}
-                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
-                  >
-                    <Printer size={15} />
-                    {hoveredBtn === 'print' && (
-                      <span style={{
-                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
-                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
-                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
-                      }}>
-                        Print
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="act-btn btn-clear"
-                    onClick={handleClear}
-                    title="Clear"
-                    aria-label="Clear"
-                    onMouseEnter={() => setHoveredBtn('clear')}
-                    onMouseLeave={() => setHoveredBtn(null)}
-                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
-                  >
-                    <XCircle size={15} />
-                    {hoveredBtn === 'clear' && (
-                      <span style={{
-                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
-                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
-                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
-                      }}>
-                        Clear
-                      </span>
-                    )}
-                  </button>
+                  {selectedCaseId && (
+                    <button
+                      type="button"
+                      className="act-btn btn-print"
+                      onClick={handlePrint}
+                      title="Print case docket"
+                      style={{ height: '42px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      <Printer size={15} />
+                      <span>Print</span>
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
-
-            {/* ================= RIGHT SIDE: CASE TABLE ================= */}
-            <div className="mgmt-table-panel">
+          </div>
+        ) : (
+          <div className="mgmt-table-panel" style={{ width: '100%', borderRadius: '12px' }}>
               <div className="panel-card-head">
                 <div className="pch-title">
                   <span className="pch-dot pch-violet" />
@@ -1106,6 +1234,15 @@ export default function CaseManagement() {
                               <div style={{ display: 'flex', gap: '4px' }}>
                                 <button
                                   type="button"
+                                  className="row-action-btn edit-btn"
+                                  onClick={() => handleSelectCase(cs, true)}
+                                  title="Edit case in form"
+                                  style={{ color: '#2563eb' }}
+                                >
+                                  <Edit3 size={13} />
+                                </button>
+                                <button
+                                  type="button"
                                   className="row-action-btn"
                                   onClick={() => handleViewCaseDetails(cs)}
                                   title="View full case docket"
@@ -1142,7 +1279,7 @@ export default function CaseManagement() {
                 }}
               />
             </div>
-          </div>
+          )}
 
           {/* ================= BULK IMPORT MODAL ================= */}
           {showImportModal && (

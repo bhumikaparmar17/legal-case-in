@@ -86,7 +86,7 @@ export default function Dashboard() {
                 <CalendarDays size={14} />
                 <span>Today's Hearings</span>
               </button>
-              <button className="btn-primary" onClick={() => go('/cases')}>
+              <button className="btn-primary" onClick={() => navigate('/cases?action=new')}>
                 <Plus size={15} strokeWidth={2.4} />
                 <span>New Case</span>
               </button>
