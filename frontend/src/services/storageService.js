@@ -1497,6 +1497,10 @@ export function toggleWaitingListPriority(id) {
   const nextType = current === 'Emergency' ? 'Conference' : 'Emergency'
   list[idx] = { ...list[idx], consultancyType: nextType, updatedAt: new Date().toISOString() }
   writeStorage(WAITING_LIST_KEY, list)
+  api.updateWaitingListEntry(id, {
+    status: list[idx].status,
+    consultancyType: nextType,
+  }).catch((e) => console.warn('MySQL toggleWaitingListPriority sync:', e.message))
   return list[idx]
 }
 

@@ -947,6 +947,9 @@ router.delete('/expenses/:id', async (req, res) => {
 // =====================================================================
 // 7. WAITING LIST & CONSULTATION QUEUE APIS (Chamber & TV Display)
 // =====================================================================
+// In-memory recall timestamp map for cross-device TV Display recall sync
+const recallTimestamps = new Map()
+
 router.get('/waiting-list', async (req, res) => {
   try {
     const rows = await query('SELECT * FROM waitinglist ORDER BY ID ASC')
@@ -963,6 +966,7 @@ router.get('/waiting-list', async (req, res) => {
       consultancyType: r.ConsultancyType || 'Conference',
       date: r.QueueDate || '',
       queueDate: r.QueueDate || '',
+      recalledAt: recallTimestamps.get(String(r.ID)) || null,
       createdAt: r.created_at,
     }))
     res.json(list)
@@ -970,6 +974,13 @@ router.get('/waiting-list', async (req, res) => {
     console.error('Error fetching waiting list:', err)
     res.status(500).json({ error: 'Failed to fetch waiting list' })
   }
+})
+
+router.post('/waiting-list/:id/recall', (req, res) => {
+  const { id } = req.params
+  const ts = Date.now()
+  recallTimestamps.set(String(id), ts)
+  res.json({ success: true, id: String(id), recalledAt: ts })
 })
 
 router.post('/waiting-list', async (req, res) => {
@@ -1009,20 +1020,72 @@ router.post('/waiting-list', async (req, res) => {
 router.put('/waiting-list/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { status, consultancyType, timeSlot } = req.body
-    let statusVal = 0
-    if (typeof status === 'number') {
-      statusVal = status
-    } else if (status === 'In Consultation') {
-      statusVal = 1
-    } else if (status === 'Completed') {
-      statusVal = 2
+    const {
+      name,
+      clientName,
+      status,
+      address,
+      phoneNo,
+      mobile,
+      timeSlot,
+      consultancyType,
+      date,
+      queueDate,
+    } = req.body
+
+    const updates = []
+    const params = []
+
+    const nameVal = name !== undefined ? name : clientName
+    if (nameVal !== undefined) {
+      updates.push('Name = ?')
+      params.push(String(nameVal).trim())
     }
 
-    if (consultancyType) {
-      await query('UPDATE waitinglist SET Status = ?, ConsultancyType = ? WHERE ID = ?', [statusVal, consultancyType, id])
-    } else {
-      await query('UPDATE waitinglist SET Status = ? WHERE ID = ?', [statusVal, id])
+    let statusVal
+    if (status !== undefined) {
+      statusVal = 0
+      if (typeof status === 'number') {
+        statusVal = status
+      } else if (status === 'In Consultation') {
+        statusVal = 1
+      } else if (status === 'Completed') {
+        statusVal = 2
+      }
+      updates.push('Status = ?')
+      params.push(statusVal)
+    }
+
+    if (address !== undefined) {
+      updates.push('Address = ?')
+      params.push(address || '')
+    }
+
+    const phoneVal = phoneNo !== undefined ? phoneNo : mobile
+    if (phoneVal !== undefined) {
+      updates.push('PhoneNo = ?')
+      params.push(phoneVal || '')
+    }
+
+    if (timeSlot !== undefined) {
+      updates.push('TimeSlot = ?')
+      params.push(timeSlot || '')
+    }
+
+    if (consultancyType !== undefined) {
+      updates.push('ConsultancyType = ?')
+      params.push(consultancyType || 'Conference')
+    }
+
+    const dateVal = queueDate !== undefined ? queueDate : date
+    if (dateVal !== undefined) {
+      updates.push('QueueDate = ?')
+      params.push(dateVal || '')
+    }
+
+    if (updates.length > 0) {
+      params.push(id)
+      await query(`UPDATE waitinglist SET ${updates.join(', ')} WHERE ID = ?`, params)
     }
 
     res.json({ id, status, statusVal })

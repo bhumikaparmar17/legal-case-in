@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Scale, Clock, Calendar, Maximize, Minimize, ArrowLeft,
   AlertCircle, Users, BellRing, Sparkles, MapPin, Phone,
-  ShieldCheck, CheckCircle2, Briefcase, Flame
+  ShieldCheck, CheckCircle2, Briefcase, Flame, Volume2, VolumeX, Globe
 } from 'lucide-react'
 import { OFFICE } from '../data/menu.js'
 import { getCases, getWaitingList, getAnnouncements, onStorageUpdate } from '../services/storageService.js'
+import { api } from '../services/api.js'
+import {
+  SUPPORTED_LANGUAGES, DEFAULT_LANGUAGES, voiceQueue, getLanguageAvailability
+} from '../utils/voiceAnnouncer.js'
 import './TvDisplayScreen.css'
 
 export default function TvDisplayScreen() {
@@ -15,6 +19,189 @@ export default function TvDisplayScreen() {
   const [waitingList, setWaitingList] = useState(() => getWaitingList())
   const [now, setNow] = useState(new Date())
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement))
+
+  // Multilingual Voice Announcement State (persisted across refresh)
+  const [audioEnabled, setAudioEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('legalcase_tv_audio_enabled') !== 'false'
+    } catch {
+      return true
+    }
+  })
+  const [selectedLangs, setSelectedLangs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('legalcase_tv_langs')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_LANGUAGES
+  })
+  const [showLangMenu, setShowLangMenu] = useState(false)
+  const [voiceAvail, setVoiceAvail] = useState(() => getLanguageAvailability())
+  const [voiceWarning, setVoiceWarning] = useState('')
+
+  const audioEnabledRef = useRef(audioEnabled)
+  const selectedLangsRef = useRef(selectedLangs)
+  const prevStatusesRef = useRef(null)
+  const lastRecallTsRef = useRef(Date.now())
+  const lastCallTsRef = useRef(Date.now() - 45000)
+  const lastAnnouncedRef = useRef({ id: null, ts: 0 })
+  const pendingAnnounceRef = useRef(null)
+
+  useEffect(() => { audioEnabledRef.current = audioEnabled }, [audioEnabled])
+  useEffect(() => { selectedLangsRef.current = selectedLangs }, [selectedLangs])
+
+  // Refresh installed voices list when browser finishes loading voices
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    const updateVoices = () => setVoiceAvail(getLanguageAvailability())
+    updateVoices()
+    window.speechSynthesis.addEventListener?.('voiceschanged', updateVoices)
+    return () => window.speechSynthesis.removeEventListener?.('voiceschanged', updateVoices)
+  }, [])
+
+  // Helper to announce a called ('In Consultation') client with their next waiting client
+  const announceClientCall = useCallback((calledItem, fullList, { force = false } = {}) => {
+    if (!audioEnabledRef.current) return
+    // If TV Display tab is currently in background, defer announcement until user switches to this tab
+    if (typeof document !== 'undefined' && document.hidden) {
+      pendingAnnounceRef.current = { calledItem, fullList }
+      return
+    }
+    const nowTs = Date.now()
+    if (!force && String(lastAnnouncedRef.current.id) === String(calledItem.id) && nowTs - lastAnnouncedRef.current.ts < 2500) {
+      return
+    }
+    pendingAnnounceRef.current = null
+    const active = fullList.filter((w) => w.status === 'Waiting' || w.status === 'In Consultation')
+    const isEmergency = calledItem.consultancyType === 'Emergency'
+    const queueList = active.filter((w) =>
+      isEmergency ? w.consultancyType === 'Emergency' : w.consultancyType !== 'Emergency'
+    )
+    const prefix = isEmergency ? 'E' : 'C'
+    const idx = queueList.findIndex((w) => String(w.id) === String(calledItem.id))
+    if (idx === -1) return
+
+    const currentToken = `${prefix}${idx + 1}`
+    const currentClientName = calledItem.clientName || calledItem.name || ''
+
+    // Find next eligible Waiting client in the same queue
+    let nextIdx = queueList.findIndex((w, i) => i > idx && w.status === 'Waiting')
+    if (nextIdx === -1) {
+      nextIdx = queueList.findIndex((w, i) => i !== idx && w.status === 'Waiting')
+    }
+    const nextItem = nextIdx !== -1 ? queueList[nextIdx] : null
+
+    lastAnnouncedRef.current = { id: calledItem.id, ts: nowTs }
+
+    voiceQueue.enqueueCall({
+      clientId: calledItem.id,
+      currentToken,
+      currentClientName,
+      nextToken: nextItem ? `${prefix}${nextIdx + 1}` : null,
+      nextClientName: nextItem ? (nextItem.clientName || nextItem.name) : null,
+      languages: selectedLangsRef.current,
+      repetitions: 1,
+      onUnavailable: (missingCodes) => {
+        const names = missingCodes.map((c) => SUPPORTED_LANGUAGES.find((l) => l.code === c)?.label || c).join(', ')
+        setVoiceWarning(`Voice unavailable on this browser for: ${names}`)
+        setTimeout(() => setVoiceWarning(''), 5000)
+      },
+      onBlocked: () => {
+        // Browser autoplay blocked speech before first click on this tab; keep pending until click
+        pendingAnnounceRef.current = { calledItem, fullList }
+        lastAnnouncedRef.current = { id: null, ts: 0 }
+        setVoiceWarning('🔊 Click anywhere on TV screen to play voice announcement')
+      },
+    })
+  }, [])
+
+  // Process queue transitions without announcing stale/initial clients
+  const processQueueTransitions = useCallback((newList) => {
+    if (!Array.isArray(newList)) return
+
+    if (prevStatusesRef.current === null) {
+      // First load: record existing statuses without announcing
+      const initMap = new Map()
+      newList.forEach((w) => initMap.set(String(w.id), w.status))
+      prevStatusesRef.current = initMap
+      return
+    }
+
+    const prevMap = prevStatusesRef.current
+    const nextMap = new Map()
+
+    newList.forEach((item) => {
+      const idStr = String(item.id)
+      const prevStatus = prevMap.get(idStr)
+      nextMap.set(idStr, item.status)
+
+      // Trigger ONLY when transitioning into 'In Consultation' (never on initial Waiting add)
+      if (item.status === 'In Consultation' && prevStatus !== undefined && prevStatus !== 'In Consultation') {
+        announceClientCall(item, newList)
+      }
+
+      // Cancel pending announcements if client is no longer In Consultation
+      if (prevStatus === 'In Consultation' && item.status !== 'In Consultation') {
+        voiceQueue.cancelClient(item.id)
+      }
+    })
+
+    // Cancel pending announcements for deleted entries
+    prevMap.forEach((prevStatus, idStr) => {
+      if (!nextMap.has(idStr) && prevStatus === 'In Consultation') {
+        voiceQueue.cancelClient(idStr)
+      }
+    })
+
+    prevStatusesRef.current = nextMap
+  }, [announceClientCall])
+
+  // Check intentional recall trigger or recent call event from Advocate Console
+  const checkRecallTrigger = useCallback((currentList) => {
+    try {
+      const raw = localStorage.getItem('legalcase_tv_recall')
+      if (raw) {
+        const data = JSON.parse(raw)
+        if (data && data.ts && data.ts > lastRecallTsRef.current) {
+          lastRecallTsRef.current = data.ts
+          const target = currentList.find((w) => String(w.id) === String(data.id) && w.status === 'In Consultation')
+          if (target) {
+            announceClientCall(target, currentList, { force: true })
+          }
+        }
+      }
+
+      const callRaw = localStorage.getItem('legalcase_tv_call_event')
+      if (callRaw) {
+        const callData = JSON.parse(callRaw)
+        if (callData && callData.ts && callData.ts > lastCallTsRef.current) {
+          lastCallTsRef.current = callData.ts
+          const target = currentList.find((w) => String(w.id) === String(callData.id) && w.status === 'In Consultation')
+          if (target) {
+            announceClientCall(target, currentList)
+          }
+        }
+      }
+
+      // Cross-device Recall check via backend recalledAt timestamp
+      if (Array.isArray(currentList)) {
+        const remoteRecalled = currentList.find(
+          (w) => w.status === 'In Consultation' && w.recalledAt && w.recalledAt > lastRecallTsRef.current
+        )
+        if (remoteRecalled) {
+          lastRecallTsRef.current = remoteRecalled.recalledAt
+          announceClientCall(remoteRecalled, currentList, { force: true })
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [announceClientCall])
 
   // Live Announcements from storageService
   const [announcements, setAnnouncements] = useState(() => getAnnouncements())
@@ -26,14 +213,87 @@ export default function TvDisplayScreen() {
     return () => clearInterval(t)
   }, [])
 
-  // Live storage event subscription (instant sync on client queue & notice changes)
+  // Live storage event + backend polling for separate-device real-time sync
   useEffect(() => {
-    return onStorageUpdate(() => {
+    const initialList = getWaitingList()
+    processQueueTransitions(initialList)
+    checkRecallTrigger(initialList)
+
+    const unsub = onStorageUpdate(() => {
       setCases(getCases())
-      setWaitingList(getWaitingList())
+      const latest = getWaitingList()
+      setWaitingList(latest)
+      processQueueTransitions(latest)
+      checkRecallTrigger(latest)
       setAnnouncements(getAnnouncements())
     })
-  }, [])
+
+    const onStorageEvt = (e) => {
+      if (e.key === 'legalcase_tv_recall' || e.key === 'legalcase_tv_call_event') {
+        checkRecallTrigger(getWaitingList())
+      } else if (e.key === 'legalcase_waiting_list_v2') {
+        const latest = getWaitingList()
+        setWaitingList(latest)
+        processQueueTransitions(latest)
+      }
+    }
+    window.addEventListener('storage', onStorageEvt)
+
+    // Flush any deferred announcement when user switches back to the TV Display tab
+    const flushPendingOnVisible = () => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      if (pendingAnnounceRef.current && audioEnabledRef.current) {
+        const { calledItem, fullList } = pendingAnnounceRef.current
+        pendingAnnounceRef.current = null
+        setVoiceWarning('')
+        // Verify the client is still In Consultation before announcing
+        const stillCalled = fullList.find(
+          (w) => String(w.id) === String(calledItem.id) && w.status === 'In Consultation'
+        )
+        if (stillCalled) {
+          announceClientCall(stillCalled, fullList, { force: true })
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', flushPendingOnVisible)
+    window.addEventListener('focus', flushPendingOnVisible)
+
+    // Silently unlock speechSynthesis on any user interaction when audioEnabled is true
+    const onFirstClick = () => {
+      if (audioEnabledRef.current && !voiceQueue.audioUnlocked) {
+        voiceQueue.unlockAudio()
+      }
+      flushPendingOnVisible()
+    }
+    window.addEventListener('pointerdown', onFirstClick, { passive: true })
+
+    // Backend polling every 3.5s for cross-device TV display & notices sync
+    const pollTimer = setInterval(() => {
+      Promise.all([
+        api.getWaitingList().catch(() => null),
+        api.getAnnouncements().catch(() => null),
+      ]).then(([wlData, annData]) => {
+        if (Array.isArray(wlData)) {
+          setWaitingList(wlData)
+          processQueueTransitions(wlData)
+          checkRecallTrigger(wlData)
+        }
+        if (Array.isArray(annData)) {
+          setAnnouncements(annData)
+        }
+      }).catch(() => {})
+    }, 3500)
+
+    return () => {
+      unsub()
+      window.removeEventListener('storage', onStorageEvt)
+      document.removeEventListener('visibilitychange', flushPendingOnVisible)
+      window.removeEventListener('focus', flushPendingOnVisible)
+      window.removeEventListener('pointerdown', onFirstClick)
+      clearInterval(pollTimer)
+      voiceQueue.clearAll()
+    }
+  }, [processQueueTransitions, checkRecallTrigger, announceClientCall])
 
   // Track Fullscreen state changes (button or Esc key)
   useEffect(() => {
@@ -43,11 +303,40 @@ export default function TvDisplayScreen() {
   }, [])
 
   const toggleFullscreen = () => {
+    // Reuse Fullscreen TV click to unlock browser audio autoplay
+    voiceQueue.unlockAudio()
+    setAudioEnabled(true)
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {})
     } else {
       document.exitFullscreen().catch(() => {})
     }
+  }
+
+  const toggleAudio = () => {
+    if (!audioEnabled) {
+      voiceQueue.unlockAudio()
+      setAudioEnabled(true)
+      try { localStorage.setItem('legalcase_tv_audio_enabled', 'true') } catch {}
+    } else {
+      voiceQueue.clearAll()
+      setAudioEnabled(false)
+      try { localStorage.setItem('legalcase_tv_audio_enabled', 'false') } catch {}
+    }
+  }
+
+  const toggleLanguage = (code) => {
+    setSelectedLangs((prev) => {
+      let next
+      if (prev.includes(code)) {
+        if (prev.length === 1) return prev // Keep at least 1 language active
+        next = prev.filter((c) => c !== code)
+      } else {
+        next = [...prev, code]
+      }
+      try { localStorage.setItem('legalcase_tv_langs', JSON.stringify(next)) } catch {}
+      return next
+    })
   }
 
   // Sort announcements so Urgent notices are shown with higher priority
@@ -304,9 +593,87 @@ export default function TvDisplayScreen() {
           )}
         </div>
 
-        <div className="tv-live-sync-pill">
-          <span className="tv-live-dot" />
-          <span>Real-time Live Sync Active</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+          {voiceWarning && (
+            <span style={{ fontSize: '11px', color: '#fbbf24', background: 'rgba(245,158,11,0.12)', padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(245,158,11,0.3)' }}>
+              {voiceWarning}
+            </span>
+          )}
+
+          {/* Minimal Audio Enable/Mute Pill */}
+          <button
+            type="button"
+            onClick={toggleAudio}
+            title={audioEnabled ? 'Mute Voice Announcements' : 'Enable Voice Announcements'}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '6px 12px', borderRadius: '999px', cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+              background: audioEnabled ? 'rgba(16, 185, 129, 0.16)' : 'rgba(245, 158, 11, 0.16)',
+              color: audioEnabled ? '#34d399' : '#fbbf24',
+              border: audioEnabled ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(245, 158, 11, 0.4)',
+            }}
+          >
+            {audioEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+            <span>{audioEnabled ? 'Audio On' : 'Enable Audio'}</span>
+          </button>
+
+          {/* Minimal Language Selector Pill */}
+          <button
+            type="button"
+            onClick={() => setShowLangMenu((v) => !v)}
+            title="Select Announcement Languages"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '6px 12px', borderRadius: '999px', cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+              background: 'rgba(255, 255, 255, 0.08)', color: '#e2e8f0',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+            }}
+          >
+            <Globe size={13} />
+            <span>{selectedLangs.map((c) => c.split('-')[0].toUpperCase()).join(' · ')}</span>
+          </button>
+
+          {showLangMenu && (
+            <div style={{
+              position: 'absolute', bottom: 'calc(100% + 10px)', right: 0, zIndex: 100,
+              background: '#0f172a', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '10px',
+              padding: '10px 12px', minWidth: '225px', boxShadow: '0 12px 30px rgba(0,0,0,0.45)',
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase' }}>
+                Announcement Languages
+              </div>
+              {SUPPORTED_LANGUAGES.map((lang) => {
+                const checked = selectedLangs.includes(lang.code)
+                const avail = voiceAvail[lang.code]?.available
+                return (
+                  <label
+                    key={lang.code}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '5px 4px', cursor: 'pointer', fontSize: '12px', color: '#f8fafc',
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleLanguage(lang.code)}
+                      />
+                      <span>{lang.label} ({lang.native})</span>
+                    </span>
+                    <span style={{ fontSize: '10px', color: avail ? '#34d399' : '#f59e0b' }}>
+                      {avail ? 'Ready' : 'No Voice'}
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="tv-live-sync-pill">
+            <span className="tv-live-dot" />
+            <span>Real-time Live Sync Active</span>
+          </div>
         </div>
       </footer>
     </div>

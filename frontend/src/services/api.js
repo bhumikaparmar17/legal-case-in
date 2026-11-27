@@ -8,6 +8,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 async function request(endpoint, options = {}) {
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, {
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
         ...(options.headers || {}),
@@ -97,6 +98,7 @@ export const api = {
   getWaitingList: () => request('/waiting-list'),
   createWaitingListEntry: (data) => request('/waiting-list', { method: 'POST', body: JSON.stringify(data) }),
   updateWaitingListEntry: (id, data) => request(`/waiting-list/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  recallWaitingListEntry: (id) => request(`/waiting-list/${id}/recall`, { method: 'POST' }),
   deleteWaitingListEntry: (id) => request(`/waiting-list/${id}`, { method: 'DELETE' }),
 
   // Announcements (Announcements)
