@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Hourglass, ListPlus, Clock, User, Phone, CheckCircle2,
   AlertCircle, ArrowLeft, ChevronRight, Search, Plus, Trash2, Edit3, Zap, ShieldAlert,
-  Megaphone, Flame, X
+  Megaphone, Flame, X, Volume2
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
@@ -23,6 +23,7 @@ export default function WaitingList() {
   const [toast, setToast] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   // TV Announcements Management State
   const [showNoticeModal, setShowNoticeModal] = useState(false)
@@ -162,6 +163,11 @@ export default function WaitingList() {
       }
       if (editingItem) {
         updateWaitingListEntry(editingItem.id, payload)
+        if (payload.status === 'In Consultation') {
+          try {
+            localStorage.setItem('legalcase_tv_call_event', JSON.stringify({ id: editingItem.id, ts: Date.now() }))
+          } catch {}
+        }
         showToast('success', `Updated entry for ${formData.clientName}!`)
       } else {
         saveWaitingListEntry(payload)
@@ -173,15 +179,24 @@ export default function WaitingList() {
     }
   }
 
-  const handleDelete = (id) => {
-    if (window.confirm('Remove client from waiting list?')) {
-      deleteWaitingListEntry(id)
-      showToast('info', 'Client removed from queue.')
-    }
+  const handleDelete = (item) => {
+    setDeleteTarget(item)
+  }
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    deleteWaitingListEntry(deleteTarget.id)
+    setDeleteTarget(null)
+    showToast('info', 'Client removed from queue.')
   }
 
   const handleStatusChange = (id, newStatus) => {
     updateWaitingListEntry(id, { status: newStatus })
+    if (newStatus === 'In Consultation') {
+      try {
+        localStorage.setItem('legalcase_tv_call_event', JSON.stringify({ id, ts: Date.now() }))
+      } catch {}
+    }
     showToast('success', `Status updated to ${newStatus}`)
   }
 
@@ -382,6 +397,25 @@ export default function WaitingList() {
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
+                            {w.status === 'In Consultation' && (
+                              <button
+                                type="button"
+                                className="btn-icon-subtle"
+                                style={{ padding: '3px 6px', border: '1px solid #bfdbfe', background: '#eff6ff', cursor: 'pointer' }}
+                                onClick={() => {
+                                  try {
+                                    localStorage.setItem('legalcase_tv_recall', JSON.stringify({ id: String(w.id), ts: Date.now() }))
+                                    api.recallWaitingListEntry(w.id).catch(() => {})
+                                    showToast('info', `Recall announcement sent to TV for ${w.clientName}`)
+                                  } catch {
+                                    // ignore
+                                  }
+                                }}
+                                title="Recall / Re-announce on TV Display"
+                              >
+                                <Volume2 size={12} color="#1d4ed8" />
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="btn-icon-subtle"
@@ -395,7 +429,7 @@ export default function WaitingList() {
                               type="button"
                               className="btn-icon-subtle"
                               style={{ padding: '3px 6px', border: '1px solid #fecaca', background: '#fff1f2', cursor: 'pointer' }}
-                              onClick={() => handleDelete(w.id)}
+                              onClick={() => handleDelete(w)}
                               title="Remove"
                             >
                               <Trash2 size={12} color="#dc2626" />
@@ -413,15 +447,39 @@ export default function WaitingList() {
           {/* Modal */}
           {showModal && (
             <div className="mgmt-modal-overlay" onClick={() => setShowModal(false)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '440px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div className="mgmt-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700' }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '460px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  background: '#ffffff',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  maxHeight: '88vh',
+                  overflowY: 'auto',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className="mgmt-modal-header"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderBottom: '1px solid #e2e8f0',
+                    paddingBottom: '12px',
+                    marginBottom: '14px',
+                  }}
+                >
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
                     {editingItem ? 'Edit Queue Entry' : 'Add Client to Waiting List'}
                   </h3>
-                  <button className="clear-search-btn" onClick={() => setShowModal(false)}>✕</button>
+                  <button type="button" className="clear-search-btn" onClick={() => setShowModal(false)} title="Close">✕</button>
                 </div>
 
-                <form onSubmit={handleSave} style={{ marginTop: '12px' }}>
+                <form onSubmit={handleSave}>
                   <div className="form-field" style={{ marginBottom: '10px' }}>
                     <label className="field-lbl">Autofill from Registered Client</label>
                     <select className="form-input form-select" onChange={(e) => handleClientSelect(e.target.value)}>
@@ -449,6 +507,7 @@ export default function WaitingList() {
                     <textarea
                       rows={2}
                       className="form-input form-textarea"
+                      style={{ height: 'auto', padding: '8px 10px' }}
                       value={formData.address}
                       onChange={(e) => setFormData((p) => ({ ...p, address: e.target.value }))}
                       placeholder="Enter client residential / chamber address..."
@@ -517,13 +576,63 @@ export default function WaitingList() {
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '14px', marginTop: '6px' }}>
                     <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                     <button type="submit" className="btn-primary" style={{ background: '#f59e0b', borderColor: '#d97706', color: '#0f172a' }}>
                       {editingItem ? 'Update Queue' : 'Add to Queue'}
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {deleteTarget && (
+            <div className="mgmt-modal-overlay" onClick={() => setDeleteTarget(null)}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '400px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  background: '#ffffff',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className="mgmt-modal-header"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderBottom: '1px solid #e2e8f0',
+                    paddingBottom: '10px',
+                    marginBottom: '12px',
+                  }}
+                >
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#dc2626' }}>
+                    Remove Queue Entry?
+                  </h3>
+                  <button type="button" className="clear-search-btn" onClick={() => setDeleteTarget(null)} title="Close">✕</button>
+                </div>
+                <p style={{ margin: '0 0 18px', fontSize: '13.5px', color: '#334155', lineHeight: 1.5 }}>
+                  Are you sure you want to remove <strong>{deleteTarget.clientName}</strong> from the chamber waiting list?
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                  <button type="button" className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: '#dc2626', borderColor: '#b91c1c', color: '#ffffff' }}
+                    onClick={confirmDelete}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             </div>
           )}

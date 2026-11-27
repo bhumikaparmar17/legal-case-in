@@ -7,11 +7,11 @@ import {
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { OFFICE } from '../data/menu.js'
-import { api } from '../services/api.js'
 import {
   getConsultancyFees, saveConsultancyFee, updateConsultancyFee,
   deleteConsultancyFee, onStorageUpdate
 } from '../services/storageService.js'
+import { api } from '../services/api.js'
 import './management.css'
 
 export default function ConsultancyFees() {
@@ -24,6 +24,7 @@ export default function ConsultancyFees() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
   const [receiptToPrint, setReceiptToPrint] = useState(null)
+  const [hoveredBtn, setHoveredBtn] = useState(null)
 
   // Form State - IMPORTANT: NO CASE ID FIELD
   const getInitialForm = () => ({
@@ -38,9 +39,9 @@ export default function ConsultancyFees() {
   const [errors, setErrors] = useState({})
 
   useEffect(() => {
-    api.getConsultancyFees().then((res) => {
-      if (Array.isArray(res) && res.length > 0) {
-        setRecords(res)
+    api.getConsultancyFees().then((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setRecords(data)
       }
     }).catch(() => {})
 
@@ -263,7 +264,9 @@ export default function ConsultancyFees() {
 
                 <div className="form-row-2">
                   <div className="form-field">
-                    <label className="field-lbl">Mobile Phone <span className="req">*</span></label>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Mobile Phone <span className="req">*</span>
+                    </label>
                     <div className="input-with-icon">
                       <Phone size={14} className="input-ic" />
                       <input
@@ -272,6 +275,7 @@ export default function ConsultancyFees() {
                         placeholder="10-digit mobile no."
                         maxLength={10}
                         className={`form-input ${errors.phone ? 'input-err' : ''}`}
+                        style={{ height: '34px' }}
                         value={formData.phone}
                         onChange={handleChange}
                       />
@@ -280,23 +284,25 @@ export default function ConsultancyFees() {
                   </div>
 
                   <div className="form-field">
-                    <label className="field-lbl">Consultation Date <span className="req">*</span></label>
-                    <div className="input-with-icon">
-                      <Calendar size={14} className="input-ic" />
-                      <input
-                        type="date"
-                        name="consultationDate"
-                        className={`form-input ${errors.consultationDate ? 'input-err' : ''}`}
-                        value={formData.consultationDate}
-                        onChange={handleChange}
-                      />
-                    </div>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Consultation Date <span className="req">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      name="consultationDate"
+                      className={`form-input ${errors.consultationDate ? 'input-err' : ''}`}
+                      style={{ height: '34px' }}
+                      value={formData.consultationDate}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-field">
-                    <label className="field-lbl">Consultancy Fee Amount (₹) <span className="req">*</span></label>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Fee Amount (₹) <span className="req">*</span>
+                    </label>
                     <div className="input-with-icon">
                       <IndianRupee size={14} className="input-ic" />
                       <input
@@ -304,6 +310,7 @@ export default function ConsultancyFees() {
                         name="amount"
                         placeholder="e.g. 1500"
                         className={`form-input ${errors.amount ? 'input-err' : ''}`}
+                        style={{ height: '34px' }}
                         value={formData.amount}
                         onChange={handleChange}
                       />
@@ -312,10 +319,13 @@ export default function ConsultancyFees() {
                   </div>
 
                   <div className="form-field">
-                    <label className="field-lbl">Payment Mode</label>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Payment Mode
+                    </label>
                     <select
                       name="paymentMode"
                       className="form-input form-select"
+                      style={{ height: '34px' }}
                       value={formData.paymentMode}
                       onChange={handleChange}
                     >
@@ -334,21 +344,22 @@ export default function ConsultancyFees() {
                     rows={3}
                     placeholder="Brief legal issue discussed (e.g. land partition, consumer grievance, deed scrutiny)..."
                     className="form-input form-textarea"
+                    style={{ height: 'auto', padding: '8px 10px' }}
                     value={formData.remarks}
                     onChange={handleChange}
                   />
                 </div>
 
-                <div className="mgmt-btn-bar">
+                <div className="mgmt-btn-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
                   <button
                     type="button"
                     className="act-btn btn-save"
                     onClick={handleSave}
                     disabled={loading || !!selectedId}
-                    style={{ background: '#0d9488', borderColor: '#0f766e', color: '#ffffff' }}
+                    style={{ flex: 1, height: '36px', background: '#0d9488', borderColor: '#0f766e', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                   >
                     <Save size={14} />
-                    <span>SAVE CONSULTANCY</span>
+                    <span>SAVE</span>
                   </button>
 
                   <button
@@ -356,16 +367,37 @@ export default function ConsultancyFees() {
                     className="act-btn btn-update"
                     onClick={handleUpdate}
                     disabled={loading || !selectedId}
+                    title={!selectedId ? 'Select a record from the table to update' : 'Update'}
+                    aria-label="Update"
+                    onMouseEnter={() => setHoveredBtn('update')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
                   >
-                    <RefreshCw size={14} />
-                    <span>UPDATE</span>
+                    <RefreshCw size={15} />
+                    {hoveredBtn === 'update' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Update
+                      </span>
+                    )}
                   </button>
 
                   {selectedId && (
                     <button
                       type="button"
                       className="act-btn"
-                      style={{ background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5' }}
+                      title="Delete"
+                      aria-label="Delete"
+                      onMouseEnter={() => setHoveredBtn('delete')}
+                      onMouseLeave={() => setHoveredBtn(null)}
+                      style={{
+                        position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0,
+                        background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5'
+                      }}
                       onClick={() => {
                         const r = records.find((x) => x.id === selectedId)
                         if (r) {
@@ -374,14 +406,41 @@ export default function ConsultancyFees() {
                         }
                       }}
                     >
-                      <Trash2 size={14} />
-                      <span>DELETE</span>
+                      <Trash2 size={15} />
+                      {hoveredBtn === 'delete' && (
+                        <span style={{
+                          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                          background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                          padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                          boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                        }}>
+                          Delete
+                        </span>
+                      )}
                     </button>
                   )}
 
-                  <button type="button" className="act-btn btn-clear" onClick={handleClear}>
-                    <XCircle size={14} />
-                    <span>CLEAR</span>
+                  <button
+                    type="button"
+                    className="act-btn btn-clear"
+                    onClick={handleClear}
+                    title="Clear"
+                    aria-label="Clear"
+                    onMouseEnter={() => setHoveredBtn('clear')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
+                  >
+                    <XCircle size={15} />
+                    {hoveredBtn === 'clear' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Clear
+                      </span>
+                    )}
                   </button>
                 </div>
               </form>

@@ -59,9 +59,45 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
     additionalCharges: '0',
     discount: '0',
     totalBillAmount: '',
+    paidAmount: '0',
+    dueAmount: '0',
+    status: 'Due',
     description: 'Legal representation and court appearance fees',
     remarks: '',
   })
+
+  // Pre-index payments for instant O(1) lookup per bill row
+  const { paymentsByClient, paymentsByBill } = useMemo(() => {
+    const byClient = new Map()
+    const byBill = new Map()
+    for (let i = 0; i < payments.length; i++) {
+      const p = payments[i]
+      const amt = Number(p.amount || 0)
+      if (amt <= 0) continue
+      const cId = String(p.clientId || '').replace(/\D/g, '')
+      if (cId) byClient.set(cId, (byClient.get(cId) || 0) + amt)
+      if (p.billId) {
+        const bKey = String(p.billId)
+        byBill.set(bKey, (byBill.get(bKey) || 0) + amt)
+      }
+    }
+    return { paymentsByClient: byClient, paymentsByBill: byBill }
+  }, [payments])
+
+  // Helper to compute real-time Paid, Due, and Status for any bill in O(1) time
+  const getBillFinancials = (b) => {
+    const total = Number(b.totalBillAmount || b.totalAmount || b.amount || 0)
+    const bBillId = String(b.id || '')
+    const bBillNo = String(b.billNumber || '')
+    const bClientId = String(b.clientId || '').replace(/\D/g, '')
+
+    const paidFromBill = (bBillId ? paymentsByBill.get(bBillId) : 0) || (bBillNo ? paymentsByBill.get(bBillNo) : 0) || 0
+    const paidFromClient = bClientId ? (paymentsByClient.get(bClientId) || 0) : 0
+    const paid = Math.max(Number(b.paidAmount || 0), paidFromBill || paidFromClient)
+    const due = Math.max(0, total - paid)
+    const status = total > 0 && paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Due'
+    return { total, paid, due, status }
+  }
 
   const [billFormData, setBillFormData] = useState(getInitialBillForm)
   const [billSearchQuery, setBillSearchQuery] = useState('')
@@ -103,24 +139,32 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
 
   useEffect(() => {
-    // 1. Live API fetch on mount -> visible in Network tab
-    api.getBills().then((data) => {
-      if (Array.isArray(data)) setBills(data)
-    }).catch(() => {})
+    // Only fetch from API if local storage cache is empty (avoids re-downloading 12MB+ on every tab switch)
+    if (bills.length === 0) {
+      api.getBills().then((data) => {
+        if (Array.isArray(data)) setBills(data)
+      }).catch(() => {})
+    }
 
-    api.getPayments().then((data) => {
-      if (Array.isArray(data)) setPayments(data)
-    }).catch(() => {})
+    if (payments.length === 0) {
+      api.getPayments().then((data) => {
+        if (Array.isArray(data)) setPayments(data)
+      }).catch(() => {})
+    }
 
-    api.getCases().then((data) => {
-      if (Array.isArray(data)) setCases(data)
-    }).catch(() => {})
+    if (cases.length === 0) {
+      api.getCases().then((data) => {
+        if (Array.isArray(data)) setCases(data)
+      }).catch(() => {})
+    }
 
-    api.getClients().then((data) => {
-      if (Array.isArray(data)) setClients(data)
-    }).catch(() => {})
+    if (clients.length === 0) {
+      api.getClients().then((data) => {
+        if (Array.isArray(data)) setClients(data)
+      }).catch(() => {})
+    }
 
-    // 2. Storage event listener for reactivity
+    // Storage event listener for instant reactivity across components
     return onStorageUpdate(() => {
       setCases(getCases())
       setClients(getClients())
@@ -157,32 +201,40 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   // ----------------------------------------------------
   // BILLING HANDLERS
   // ----------------------------------------------------
-  // Filter cases/clients for Bill Registration
+  // Filter cases/clients for Bill Registration (early exit at 10 results for zero lag)
   const billSearchResults = useMemo(() => {
     const q = billSearchQuery.trim().toLowerCase()
 
-    // 1. Matching cases from Case Master
-    const matchedCases = cases.filter((cs) => {
-      if (!q) return true
-      return (
+    const matchedCases = []
+    for (let i = 0; i < cases.length && matchedCases.length < 6; i++) {
+      const cs = cases[i]
+      if (!q || (
         (cs.clientId && String(cs.clientId).toLowerCase().includes(q)) ||
         (cs.clientName && String(cs.clientName).toLowerCase().includes(q)) ||
         (cs.id && String(cs.id).toLowerCase().includes(q)) ||
         (cs.caseNumber && String(cs.caseNumber).toLowerCase().includes(q)) ||
         (cs.phone && String(cs.phone).includes(q))
-      )
-    })
+      )) {
+        matchedCases.push(cs)
+      }
+    }
 
-    // 2. Matching clients from Client Master
-    const matchedClients = clients.filter((c) => {
-      if (!q) return true
-      const cId = String(c.clientId || c.id || '').toLowerCase()
-      const cName = String(c.clientName || c.name || '').toLowerCase()
-      const cPhone = String(c.phone || c.mobile || '')
-      return cId.includes(q) || cName.includes(q) || cPhone.includes(q)
-    })
+    const matchedClients = []
+    for (let i = 0; i < clients.length && matchedClients.length < 10; i++) {
+      const c = clients[i]
+      if (!q) {
+        matchedClients.push(c)
+      } else {
+        const cId = String(c.clientId || c.id || '').toLowerCase()
+        const cName = String(c.clientName || c.name || '').toLowerCase()
+        const cPhone = String(c.phone || c.mobile || '')
+        if (cId.includes(q) || cName.includes(q) || cPhone.includes(q)) {
+          matchedClients.push(c)
+        }
+      }
+    }
 
-    // Map clients into selectable billing items
+    // Map only the top 10 matched clients
     const clientOptions = matchedClients.map((c) => {
       const cId = String(c.clientId || c.id || '')
       const cName = c.clientName || c.name || ''
@@ -281,6 +333,9 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
       courtName: resolvedCourt,
       contractAmount: String(contract),
       totalBillAmount: String(total),
+      paidAmount: '0',
+      dueAmount: String(total),
+      status: 'Due',
     }))
     setBillSearchQuery(`${resolvedClientId} - ${resolvedClientName} (${resolvedCaseNo})`)
     setBillDropdownOpen(false)
@@ -293,18 +348,22 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
       clientId: b.clientId || '',
       clientName: b.clientName || '',
     })
+    const { total, paid, due, status } = getBillFinancials(b)
     setBillFormData({
       billNumber: b.billNumber || '',
       billDate: b.billDate || new Date().toISOString().split('T')[0],
-      caseId: b.caseId || '',
+      caseId: b.caseId || (b.clientId ? `CLIENT-${b.clientId}` : ''),
       clientId: b.clientId || '',
       clientName: b.clientName || '',
       caseNumber: b.caseNumber || '',
       courtName: b.courtName || '',
-      contractAmount: String(b.contractAmount || 0),
+      contractAmount: String(b.contractAmount || total || 0),
       additionalCharges: String(b.additionalCharges || 0),
       discount: String(b.discount || 0),
-      totalBillAmount: String(b.totalBillAmount || 0),
+      totalBillAmount: String(total),
+      paidAmount: String(paid),
+      dueAmount: String(due),
+      status,
       description: b.description || 'Legal representation and court appearance fees',
       remarks: b.remarks || '',
     })
@@ -325,11 +384,31 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
     setBillFormData((prev) => {
       const next = { ...prev, [name]: value }
       if (name === 'contractAmount' || name === 'additionalCharges' || name === 'discount') {
-        next.totalBillAmount = String(handleBillAmountMath(
+        const newTotal = handleBillAmountMath(
           name === 'contractAmount' ? value : next.contractAmount,
           name === 'additionalCharges' ? value : next.additionalCharges,
           name === 'discount' ? value : next.discount
-        ))
+        )
+        const paid = Number(next.paidAmount || 0)
+        const due = Math.max(0, newTotal - paid)
+        next.totalBillAmount = String(newTotal)
+        next.dueAmount = String(due)
+        next.status = newTotal > 0 && paid >= newTotal ? 'Paid' : paid > 0 ? 'Partial' : 'Due'
+      } else if (name === 'paidAmount') {
+        const total = Number(next.totalBillAmount || 0)
+        const paid = Math.max(0, Number(value || 0))
+        const due = Math.max(0, total - paid)
+        next.dueAmount = String(due)
+        next.status = total > 0 && paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Due'
+      } else if (name === 'status') {
+        const total = Number(next.totalBillAmount || 0)
+        if (value === 'Paid') {
+          next.paidAmount = String(total)
+          next.dueAmount = '0'
+        } else if (value === 'Due') {
+          next.paidAmount = '0'
+          next.dueAmount = String(total)
+        }
       }
       return next
     })
@@ -347,7 +426,7 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   const handleSaveBill = (e) => {
     if (e) e.preventDefault()
     const errs = {}
-    if (!billFormData.caseId) errs.caseId = 'Please select a Client Case Docket'
+    if (!billFormData.caseId && !billFormData.clientId) errs.caseId = 'Please select a Client Case Docket'
     if (!billFormData.totalBillAmount || Number(billFormData.totalBillAmount) <= 0) {
       errs.totalBillAmount = 'Total bill amount must be greater than 0'
     }
@@ -361,6 +440,11 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
     setLoading(true)
     setTimeout(() => {
       try {
+        const totalAmt = Number(billFormData.totalBillAmount || 0)
+        const paidAmt = Math.max(0, Number(billFormData.paidAmount || 0))
+        const dueAmt = Math.max(0, totalAmt - paidAmt)
+        const statusVal = totalAmt > 0 && paidAmt >= totalAmt ? 'Paid' : paidAmt > 0 ? 'Partial' : 'Due'
+
         const payload = {
           billNumber: billFormData.billNumber,
           billDate: billFormData.billDate,
@@ -372,16 +456,48 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
           contractAmount: Number(billFormData.contractAmount || 0),
           additionalCharges: Number(billFormData.additionalCharges || 0),
           discount: Number(billFormData.discount || 0),
-          totalBillAmount: Number(billFormData.totalBillAmount || 0),
+          totalBillAmount: totalAmt,
+          paidAmount: paidAmt,
+          dueAmount: dueAmt,
+          status: statusVal,
           description: billFormData.description,
           remarks: billFormData.remarks,
         }
 
         if (selectedBillId) {
+          const existingBill = bills.find((b) => String(b.id) === String(selectedBillId))
+          const prevPaid = existingBill ? getBillFinancials(existingBill).paid : 0
           const updated = updateBill(selectedBillId, payload)
+          // Sync any additional paid amount into Client Payment & Date-Wise Receipts
+          const extraPaid = paidAmt - prevPaid
+          if (extraPaid > 0) {
+            savePayment({
+              caseId: billFormData.caseId,
+              clientId: billFormData.clientId,
+              clientName: billFormData.clientName,
+              billId: updated.id,
+              paymentDate: billFormData.billDate,
+              amount: extraPaid,
+              mode: 'Cash',
+              remarks: `Payment recorded via Bill ${updated.billNumber || selectedBillId}`,
+            })
+          }
           showToast('success', `Bill ${updated.billNumber || selectedBillId} updated successfully!`)
         } else {
           const saved = saveBill(payload)
+          // If paid amount entered directly while creating bill, also record payment receipt
+          if (paidAmt > 0) {
+            savePayment({
+              caseId: billFormData.caseId,
+              clientId: billFormData.clientId,
+              clientName: billFormData.clientName,
+              billId: saved.id,
+              paymentDate: billFormData.billDate,
+              amount: paidAmt,
+              mode: 'Cash',
+              remarks: `Initial payment for Bill ${saved.billNumber}`,
+            })
+          }
           showToast('success', `Bill ${saved.billNumber} created successfully!`)
         }
         handleClearBillForm()
@@ -400,26 +516,35 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
   const paymentSearchResults = useMemo(() => {
     const q = paymentSearchQuery.trim().toLowerCase()
 
-    // 1. Matching cases
-    const matchedCases = cases.filter((cs) => {
-      if (!q) return true
-      return (
+    // Early exit at 6 cases and 10 clients to avoid 50M+ loop iterations
+    const matchedCases = []
+    for (let i = 0; i < cases.length && matchedCases.length < 6; i++) {
+      const cs = cases[i]
+      if (!q || (
         (cs.clientId && String(cs.clientId).toLowerCase().includes(q)) ||
         (cs.clientName && String(cs.clientName).toLowerCase().includes(q)) ||
         (cs.id && String(cs.id).toLowerCase().includes(q)) ||
         (cs.caseNumber && String(cs.caseNumber).toLowerCase().includes(q)) ||
         (cs.phone && String(cs.phone).includes(q))
-      )
-    })
+      )) {
+        matchedCases.push(cs)
+      }
+    }
 
-    // 2. Matching clients
-    const matchedClients = clients.filter((c) => {
-      if (!q) return true
-      const cId = String(c.clientId || c.id || '').toLowerCase()
-      const cName = String(c.clientName || c.name || '').toLowerCase()
-      const cPhone = String(c.phone || c.mobile || '')
-      return cId.includes(q) || cName.includes(q) || cPhone.includes(q)
-    })
+    const matchedClients = []
+    for (let i = 0; i < clients.length && matchedClients.length < 10; i++) {
+      const c = clients[i]
+      if (!q) {
+        matchedClients.push(c)
+      } else {
+        const cId = String(c.clientId || c.id || '').toLowerCase()
+        const cName = String(c.clientName || c.name || '').toLowerCase()
+        const cPhone = String(c.phone || c.mobile || '')
+        if (cId.includes(q) || cName.includes(q) || cPhone.includes(q)) {
+          matchedClients.push(c)
+        }
+      }
+    }
 
     const clientOptions = matchedClients.map((c) => {
       const cId = String(c.clientId || c.id || '')
@@ -490,22 +615,26 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
 
   const handleSelectCaseForPayment = (cs) => {
     const contract = Number(cs.contractAmount || cs.tcc || cs.totalFees || cs.fees || 0)
-    const paid = Number(cs.paidAmount || 0)
-    const due = Number(cs.dueAmount !== undefined ? cs.dueAmount : Math.max(0, contract - paid))
-
     const resolvedClientId = cs.clientId || String(cs.id) || 'CL-1001'
     const resolvedClientName = cs.clientName || cs.name || ''
     const resolvedCaseId = cs.caseId || (cs.isDirectClient ? `CLIENT-${resolvedClientId}` : cs.id)
     const resolvedCaseNo = cs.caseNumber || (cs.isDirectClient ? 'Direct Client / Chamber' : '')
 
-    // Check if there's a matching bill
-    const relatedBill = bills.find((b) =>
-      b.caseId === resolvedCaseId ||
-      String(b.clientId).toLowerCase() === String(resolvedClientId).toLowerCase() ||
-      (b.clientName && String(b.clientName).trim().toLowerCase() === resolvedClientName.trim().toLowerCase())
+    const cIdClean = String(resolvedClientId || '').replace(/\D/g, '')
+    const clientBills = bills.filter((b) =>
+      (b.caseId && b.caseId === resolvedCaseId) ||
+      (cIdClean && String(b.clientId || '').replace(/\D/g, '') === cIdClean)
+    )
+    const clientPayments = payments.filter((pm) =>
+      (pm.caseId && pm.caseId === resolvedCaseId) ||
+      (cIdClean && String(pm.clientId || '').replace(/\D/g, '') === cIdClean)
     )
 
-    const billedTotal = relatedBill ? Number(relatedBill.totalBillAmount || relatedBill.amount || 0) : contract
+    const relatedBill = clientBills[0] || null
+    const totalBilled = clientBills.reduce((s, b) => s + Number(b.totalBillAmount || b.totalAmount || b.amount || 0), 0)
+    const effectiveTotal = totalBilled > 0 ? totalBilled : contract
+    const totalPaidSoFar = clientPayments.reduce((s, pm) => s + Number(pm.amount || 0), 0)
+    const due = Math.max(0, effectiveTotal - totalPaidSoFar)
 
     setSelectedPaymentId(null)
     setSelectedPaymentClientFilter({
@@ -519,9 +648,9 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
       clientId: resolvedClientId,
       clientName: resolvedClientName,
       billId: relatedBill ? relatedBill.id : '',
-      contract: String(contract),
-      totalBillAmount: String(billedTotal),
-      alreadyPaid: String(paid),
+      contract: String(effectiveTotal),
+      totalBillAmount: String(effectiveTotal),
+      alreadyPaid: String(totalPaidSoFar),
       dueAmount: String(due),
       amount: '',
       dueAfterPayment: String(due),
@@ -540,21 +669,38 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
 
     const relatedCase = cases.find((c) => c.id === p.caseId)
     const contract = Number(relatedCase?.contractAmount || relatedCase?.tcc || relatedCase?.totalFees || p.contract || 0)
-    const paid = Number(relatedCase?.paidAmount || 0)
-    const due = Number(relatedCase?.dueAmount !== undefined ? relatedCase?.dueAmount : Math.max(0, contract - paid))
+
+    const pClientClean = String(p.clientId || '').replace(/\D/g, '')
+    const clientBills = bills.filter((b) =>
+      (p.billId && (String(b.id) === String(p.billId) || String(b.billNumber) === String(p.billId))) ||
+      (p.caseId && b.caseId === p.caseId) ||
+      (pClientClean && String(b.clientId || '').replace(/\D/g, '') === pClientClean)
+    )
+    const clientPayments = payments.filter((pm) =>
+      (p.caseId && pm.caseId === p.caseId) ||
+      (pClientClean && String(pm.clientId || '').replace(/\D/g, '') === pClientClean)
+    )
+
+    const totalBilled = clientBills.reduce((s, b) => s + Number(b.totalBillAmount || b.totalAmount || b.amount || 0), 0)
+    const effectiveTotal = totalBilled > 0 ? totalBilled : contract
+    const totalPaidOther = clientPayments
+      .filter((pm) => String(pm.id) !== String(p.id))
+      .reduce((s, pm) => s + Number(pm.amount || 0), 0)
+    const dueBeforeThis = Math.max(0, effectiveTotal - totalPaidOther)
+    const dueAfterThis = Math.max(0, dueBeforeThis - Number(p.amount || 0))
 
     setPaymentFormData({
       caseId: p.caseId || '',
       clientId: p.clientId || '',
       clientName: p.clientName || '',
       billId: p.billId || '',
-      contract: String(contract),
-      totalBillAmount: String(contract),
-      alreadyPaid: String(paid),
-      dueAmount: String(due),
+      contract: String(effectiveTotal),
+      totalBillAmount: String(effectiveTotal),
+      alreadyPaid: String(totalPaidOther),
+      dueAmount: String(dueBeforeThis),
       paymentDate: p.paymentDate || new Date().toISOString().split('T')[0],
       amount: String(p.amount || ''),
-      dueAfterPayment: String(Math.max(0, due - Number(p.amount || 0))),
+      dueAfterPayment: String(dueAfterThis),
       mode: p.mode || 'Cash',
       reference: p.reference || '',
       remarks: p.remarks || '',
@@ -594,6 +740,7 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
 
   const handleSavePayment = (e) => {
     if (e) e.preventDefault()
+    if (loading) return
     const errs = {}
     if (!paymentFormData.caseId) errs.caseId = 'Please select a Client Case Docket'
     if (!paymentFormData.amount || Number(paymentFormData.amount) <= 0) {
@@ -808,11 +955,6 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                 <Receipt size={14} />
                 <span>Date-Wise Receipts</span>
               </button>
-
-              <button className="btn-secondary" onClick={() => window.print()}>
-                <Printer size={14} />
-                <span>Print</span>
-              </button>
             </div>
           </div>
 
@@ -860,11 +1002,11 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                 <form className="mgmt-form" onSubmit={handleSaveBill}>
                   {/* Searchable Client & Case Selector */}
                   <div className="form-field" ref={billDropdownRef} style={{ position: 'relative' }}>
-                    <label className="field-lbl">Select Client / Case Docket <span className="req">*</span></label>
+                    <label className="field-lbl">Select Client <span className="req">*</span></label>
                     <div style={{ position: 'relative' }}>
                       <input
                         type="text"
-                        placeholder="Search Client ID, Name or Case No..."
+                        placeholder="Search Client ID or Name..."
                         className={`form-input ${billErrors.caseId ? 'input-err' : ''}`}
                         value={billSearchQuery}
                         onChange={(e) => {
@@ -982,7 +1124,7 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                       <input
                         type="text"
                         className="form-input readonly-input"
-                        value={billFormData.clientName || 'Auto-filled from case'}
+                        value={billFormData.clientName || 'Auto-filled from client'}
                         readOnly
                       />
                     </div>
@@ -1045,28 +1187,67 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                     {billErrors.totalBillAmount && <span className="err-msg">{billErrors.totalBillAmount}</span>}
                   </div>
 
-                  {/* Description / Particulars */}
+                  {/* Paid, Due & Status Row */}
+                  <div className="form-row-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ color: '#15803d', fontWeight: '700' }}>Paid (₹)</label>
+                      <input
+                        type="number"
+                        name="paidAmount"
+                        min="0"
+                        placeholder="0"
+                        className="form-input"
+                        value={billFormData.paidAmount}
+                        onChange={handleBillInputChange}
+                        style={{ color: '#15803d', fontWeight: '700', background: '#f0fdf4', borderColor: '#bbf7d0' }}
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ color: '#b91c1c', fontWeight: '700' }}>Due (₹)</label>
+                      <input
+                        type="number"
+                        name="dueAmount"
+                        className="form-input readonly-input"
+                        value={billFormData.dueAmount}
+                        readOnly
+                        style={{
+                          color: Number(billFormData.dueAmount || 0) > 0 ? '#dc2626' : '#64748b',
+                          fontWeight: '700',
+                          background: Number(billFormData.dueAmount || 0) > 0 ? '#fef2f2' : '#f8fafc',
+                          borderColor: Number(billFormData.dueAmount || 0) > 0 ? '#fecaca' : '#e2e8f0'
+                        }}
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label className="field-lbl" style={{ fontWeight: '700' }}>Status</label>
+                      <select
+                        name="status"
+                        className="form-input"
+                        value={billFormData.status}
+                        onChange={handleBillInputChange}
+                        style={{
+                          fontWeight: '700',
+                          color: billFormData.status === 'Paid' ? '#15803d' : billFormData.status === 'Partial' ? '#b45309' : '#b91c1c',
+                          background: billFormData.status === 'Paid' ? '#dcfce7' : billFormData.status === 'Partial' ? '#fef3c7' : '#fee2e2',
+                          borderColor: billFormData.status === 'Paid' ? '#86efac' : billFormData.status === 'Partial' ? '#fde68a' : '#fca5a5'
+                        }}
+                      >
+                        <option value="Due">Due</option>
+                        <option value="Partial">Partial</option>
+                        <option value="Paid">Paid</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Description / Particulars (Maps to Details column in DB) */}
                   <div className="form-field">
-                    <label className="field-lbl">Description / Billing Particulars</label>
+                    <label className="field-lbl">Details / Billing Particulars</label>
                     <input
                       type="text"
                       name="description"
                       placeholder="e.g. Legal defense, draft petitions, and hearing fees"
                       className="form-input"
                       value={billFormData.description}
-                      onChange={handleBillInputChange}
-                    />
-                  </div>
-
-                  {/* Remarks */}
-                  <div className="form-field">
-                    <label className="field-lbl">Remarks / Billing Terms</label>
-                    <textarea
-                      name="remarks"
-                      rows={2}
-                      placeholder="Special instructions or stage details..."
-                      className="form-input"
-                      value={billFormData.remarks}
                       onChange={handleBillInputChange}
                     />
                   </div>
@@ -1153,7 +1334,6 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                         <th>DATE</th>
                         <th>CLIENT ID</th>
                         <th>CLIENT NAME</th>
-                        <th>CASE NO</th>
                         <th style={{ textAlign: 'right' }}>TOTAL BILL</th>
                         <th style={{ textAlign: 'right' }}>PAID</th>
                         <th style={{ textAlign: 'right' }}>DUE</th>
@@ -1164,18 +1344,16 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                     <tbody>
                       {filteredBills.length === 0 ? (
                         <tr>
-                          <td colSpan={10} className="empty-table-cell">
+                          <td colSpan={9} className="empty-table-cell">
                             <AlertCircle size={18} className="empty-ic" />
                             <span>No bills found matching search.</span>
                           </td>
                         </tr>
                       ) : (
                         paginatedBills.map((b) => {
-                          const billTotal = Number(b.totalBillAmount || b.totalAmount || b.amount || 0)
-                          const billPaid = Number(b.paidAmount || 0)
-                          const billDue = Math.max(0, billTotal - billPaid)
-                          const isFullyPaid = billPaid >= billTotal && billTotal > 0
-                          const isPartial = billPaid > 0 && billPaid < billTotal
+                          const { total: billTotal, paid: billPaid, due: billDue, status: billStatus } = getBillFinancials(b)
+                          const isFullyPaid = billStatus === 'Paid'
+                          const isPartial = billStatus === 'Partial'
 
                           const displayBillNo = b.billNumber || b.billNo || (b.id ? `BILL-${b.id}` : '—')
                           const displayDate = b.billDate || b.billingDate || b.date || '—'
@@ -1198,7 +1376,6 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                                 </span>
                               </td>
                               <td><strong className="primary-text">{b.clientName}</strong></td>
-                              <td><span style={{ color: '#7c3aed', fontSize: '12px', fontWeight: '600' }}>{b.caseNumber || b.caseId}</span></td>
                               <td style={{ textAlign: 'right', fontWeight: '800', color: '#0f172a' }}>
                                 ₹{billTotal.toLocaleString('en-IN')}
                               </td>
@@ -1310,11 +1487,11 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                 <form className="mgmt-form" onSubmit={handleSavePayment}>
                   {/* Searchable Case / Client Selector */}
                   <div className="form-field" ref={paymentDropdownRef} style={{ position: 'relative' }}>
-                    <label className="field-lbl">Select Client / Case Docket <span className="req">*</span></label>
+                    <label className="field-lbl">Select Client <span className="req">*</span></label>
                     <div style={{ position: 'relative' }}>
                       <input
                         type="text"
-                        placeholder="Search Client ID, Name or Case No..."
+                        placeholder="Search Client ID or Name..."
                         className={`form-input ${paymentErrors.caseId ? 'input-err' : ''}`}
                         value={paymentSearchQuery}
                         onChange={(e) => {
@@ -1725,9 +1902,20 @@ export default function PaymentManagement({ initialTab = 'billing' }) {
                   DATE WISE PAYMENT DETAILS
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '13px', color: '#0f172a', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: '700', fontSize: '13px', color: '#0f172a', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <span>Listing Date: <u>{selectedDate}</u></span>
-                  <span>Total Amount Collected: <u style={{ color: '#16a34a' }}>₹{totalDateWiseAmt.toLocaleString('en-IN')}</u></span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span>Total Amount Collected: <u style={{ color: '#16a34a' }}>₹{totalDateWiseAmt.toLocaleString('en-IN')}</u></span>
+                    <button
+                      type="button"
+                      className="btn-secondary no-print"
+                      onClick={() => window.print()}
+                      style={{ padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      <Printer size={13} />
+                      <span>Print</span>
+                    </button>
+                  </div>
                 </div>
 
                 {dateWisePayments.length === 0 ? (

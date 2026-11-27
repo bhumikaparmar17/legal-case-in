@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Users, UserPlus, Save, RefreshCw, Printer, XCircle, Search,
@@ -22,6 +22,19 @@ export default function ClientManagement({ viewMode }) {
   const isInfoMode = viewMode === 'information' || location.pathname.includes('client-information')
   const [clients, setClients] = useState(() => getClients())
   const [selectedId, setSelectedId] = useState(null)
+  const formPanelRef = useRef(null)
+  const nameInputRef = useRef(null)
+  const [hoveredBtn, setHoveredBtn] = useState(null)
+
+  // Compute strict sequential next Client ID (queue order: max existing numeric ID + 1)
+  const nextClientId = useMemo(() => {
+    let maxId = 0
+    clients.forEach((c) => {
+      const num = parseInt(String(c.id || '').replace(/\D/g, ''), 10)
+      if (!isNaN(num) && num > maxId) maxId = num
+    })
+    return String(maxId + 1)
+  }, [clients])
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
@@ -461,9 +474,18 @@ export default function ClientManagement({ viewMode }) {
                   <span>Register New Client (Master)</span>
                 </button>
               ) : (
-                <button className="btn-primary" onClick={handleClear}>
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    handleClear()
+                    setTimeout(() => {
+                      formPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      nameInputRef.current?.focus()
+                    }, 50)
+                  }}
+                >
                   <UserPlus size={14} />
-                  <span>New Client Form</span>
+                  <span>New Client</span>
                 </button>
               )}
             </div>
@@ -519,7 +541,7 @@ export default function ClientManagement({ viewMode }) {
           <div className={isInfoMode ? "mgmt-single-panel" : "mgmt-two-panel"}>
             {/* ================= LEFT PANEL: CLIENT FORM (Only in Client Master) ================= */}
             {!isInfoMode && (
-              <div className="mgmt-form-panel">
+              <div className="mgmt-form-panel" ref={formPanelRef}>
               <div className="panel-card-head">
                 <div className="pch-title">
                   <span className="pch-dot pch-blue" />
@@ -654,8 +676,10 @@ export default function ClientManagement({ viewMode }) {
                     <input
                       type="text"
                       className="form-input readonly-input"
-                      value={selectedId || '(Auto Assigned Upon Save)'}
+                      value={selectedId || nextClientId}
                       readOnly
+                      tabIndex={-1}
+                      style={{ pointerEvents: 'none', background: '#f1f5f9', fontWeight: '700', color: '#1d4ed8' }}
                     />
                   </div>
                   <div className="form-field">
@@ -678,6 +702,7 @@ export default function ClientManagement({ viewMode }) {
                 <div className="form-field">
                   <label className="field-lbl">Client Full Name <span className="req">*</span></label>
                   <input
+                    ref={nameInputRef}
                     type="text"
                     name="name"
                     placeholder="Enter full legal name of client"
@@ -756,16 +781,7 @@ export default function ClientManagement({ viewMode }) {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {(formData.otherPhones || [{ name: '', phone: '' }]).map((op, idx) => (
-                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'center' }}>
-                        <div>
-                          <input
-                            type="text"
-                            placeholder="Reference Name / Relation (e.g. WhatsApp, Brother)"
-                            className="form-input"
-                            value={op.name}
-                            onChange={(e) => handleOtherPhoneChange(idx, 'name', e.target.value)}
-                          />
-                        </div>
+                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: (formData.otherPhones || []).length > 1 ? '1fr auto' : '1fr', gap: '8px', alignItems: 'center' }}>
                         <div className="input-with-icon">
                           <Phone size={14} className="input-ic" />
                           <input
@@ -859,39 +875,15 @@ export default function ClientManagement({ viewMode }) {
                   )}
                 </div>
 
-                {/* Client Classification & Engagement: Only Option 1 remains (options 2, 3, 4 removed) */}
-                <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', margin: '4px 0' }}>
-                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#475569', marginBottom: '8px' }}>
-                    Client Classification &amp; Engagement
-                  </div>
-                  <div className="form-field">
-                    <label className="field-lbl">Client Category / Branch</label>
-                    <select
-                      name="clientCategory"
-                      className="form-input form-select"
-                      value={formData.clientCategory}
-                      onChange={handleChange}
-                    >
-                      <option value="Civil">Civil Litigation</option>
-                      <option value="Criminal">Criminal Defense / Bail</option>
-                      <option value="Revenue">Revenue &amp; Land Laws</option>
-                      <option value="Family / Matrimonial">Family / Matrimonial</option>
-                      <option value="Corporate">Corporate &amp; Commercial</option>
-                      <option value="Writ / Constitutional">High Court Writ</option>
-                      <option value="Consumer / Labor">Consumer / Labor Dispute</option>
-                      <option value="Other">Other Legal Matter</option>
-                    </select>
-                  </div>
-                </div>
-
                 {/* Action Buttons Row */}
-                <div className="mgmt-btn-bar">
+                <div className="mgmt-btn-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
                   <button
                     type="button"
                     className="act-btn btn-save"
                     onClick={handleSave}
                     disabled={loading || !!selectedId}
                     title={selectedId ? 'Clear selection to save a new client' : 'Save client permanently'}
+                    style={{ flex: 1, height: '36px' }}
                   >
                     <Save size={14} />
                     <span>SAVE</span>
@@ -902,23 +894,51 @@ export default function ClientManagement({ viewMode }) {
                     className="act-btn btn-update"
                     onClick={handleUpdate}
                     disabled={loading || !selectedId}
-                    title={!selectedId ? 'Select a client from the table to update' : 'Save modifications'}
+                    title={!selectedId ? 'Select a client from the table to update' : 'Update'}
+                    aria-label="Update"
+                    onMouseEnter={() => setHoveredBtn('update')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
                   >
-                    <RefreshCw size={14} />
-                    <span>UPDATE</span>
+                    <RefreshCw size={15} />
+                    {hoveredBtn === 'update' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Update
+                      </span>
+                    )}
                   </button>
 
                   {selectedId && (
                     <button
                       type="button"
                       className="act-btn"
-                      style={{ background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5' }}
                       onClick={() => promptDeleteClient(selectedClient)}
                       disabled={loading}
-                      title="Delete client with confirmation"
+                      title="Delete"
+                      aria-label="Delete"
+                      onMouseEnter={() => setHoveredBtn('delete')}
+                      onMouseLeave={() => setHoveredBtn(null)}
+                      style={{
+                        position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0,
+                        background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5'
+                      }}
                     >
-                      <Trash2 size={14} />
-                      <span>DELETE</span>
+                      <Trash2 size={15} />
+                      {hoveredBtn === 'delete' && (
+                        <span style={{
+                          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                          background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                          padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                          boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                        }}>
+                          Delete
+                        </span>
+                      )}
                     </button>
                   )}
 
@@ -927,20 +947,46 @@ export default function ClientManagement({ viewMode }) {
                     className="act-btn btn-print"
                     onClick={handlePrint}
                     disabled={!selectedId}
-                    title="Print legal client registration docket"
+                    title="Print"
+                    aria-label="Print"
+                    onMouseEnter={() => setHoveredBtn('print')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
                   >
-                    <Printer size={14} />
-                    <span>PRINT</span>
+                    <Printer size={15} />
+                    {hoveredBtn === 'print' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Print
+                      </span>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     className="act-btn btn-clear"
                     onClick={handleClear}
-                    title="Clear fields for a fresh registration"
+                    title="Clear"
+                    aria-label="Clear"
+                    onMouseEnter={() => setHoveredBtn('clear')}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{ position: 'relative', width: '38px', height: '36px', padding: 0, flexShrink: 0 }}
                   >
-                    <XCircle size={14} />
-                    <span>CLEAR</span>
+                    <XCircle size={15} />
+                    {hoveredBtn === 'clear' && (
+                      <span style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: '600',
+                        padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 50,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        Clear
+                      </span>
+                    )}
                   </button>
                 </div>
               </form>
@@ -987,7 +1033,6 @@ export default function ClientManagement({ viewMode }) {
                       {isInfoMode && (
                         <th style={{ minWidth: '160px', padding: '6px 8px' }}>RESIDENTIAL ADDRESS</th>
                       )}
-                      <th style={{ width: '105px', minWidth: '105px', padding: '6px 8px' }}>CATEGORY &amp; ROLE</th>
                       <th style={{ width: isInfoMode ? '140px' : '120px', minWidth: isInfoMode ? '140px' : '120px', maxWidth: isInfoMode ? '160px' : '130px', padding: '6px 8px' }}>PHONE</th>
                       <th style={{ width: isInfoMode ? '85px' : '75px', minWidth: isInfoMode ? '85px' : '75px', textAlign: 'right', padding: '6px 8px' }}>FEES (₹)</th>
                       <th style={{ width: isInfoMode ? '85px' : '65px', minWidth: isInfoMode ? '85px' : '65px', textAlign: 'center', padding: '6px 8px' }}>ACTIONS</th>
@@ -996,7 +1041,7 @@ export default function ClientManagement({ viewMode }) {
                   <tbody>
                     {filteredClients.length === 0 ? (
                       <tr>
-                        <td colSpan={isInfoMode ? 7 : 6} className="empty-table-cell">
+                        <td colSpan={isInfoMode ? 6 : 5} className="empty-table-cell">
                           <AlertCircle size={18} className="empty-ic" />
                           <span>No client records match your search query.</span>
                         </td>
@@ -1031,22 +1076,6 @@ export default function ClientManagement({ viewMode }) {
                                 </div>
                               </td>
                             )}
-                            <td style={{ width: '105px', minWidth: '105px', maxWidth: '115px', overflow: 'hidden' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.15', maxWidth: '100%', overflow: 'hidden' }}>
-                                <span
-                                  style={{ fontSize: '11px', fontWeight: '600', color: '#1e40af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                                  title={client.clientCategory || 'Civil'}
-                                >
-                                  {client.clientCategory || 'Civil'}
-                                </span>
-                                <span
-                                  style={{ fontSize: '9.5px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                                  title={client.casePosition || 'Litigant'}
-                                >
-                                  {client.casePosition || 'Litigant'}
-                                </span>
-                              </div>
-                            </td>
                             <td style={{ width: isInfoMode ? '140px' : '120px', minWidth: isInfoMode ? '140px' : '120px', maxWidth: isInfoMode ? '160px' : '130px', overflow: 'hidden' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.15', maxWidth: '100%', overflow: 'hidden' }}>
                                 <span
@@ -1127,17 +1156,37 @@ export default function ClientManagement({ viewMode }) {
           {/* ================= CLIENT HISTORY MODAL ================= */}
           {historyModalClient && (
             <div className="mgmt-modal-overlay" onClick={() => setHistoryModalClient(null)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '750px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div className="mgmt-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '780px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  maxHeight: '88vh',
+                  overflowY: 'auto',
+                  background: '#ffffff'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mgmt-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '14px' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700' }}>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
                       Client History: {historyModalClient.client?.name} ({historyModalClient.client?.id})
                     </h3>
-                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
-                      Phone: {historyModalClient.client?.phone} · Address: {historyModalClient.client?.address || 'N/A'}
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>
+                      Phone: {historyModalClient.client?.phone || 'N/A'} · Address: {historyModalClient.client?.address || 'N/A'}
                     </p>
                   </div>
-                  <button className="clear-search-btn" onClick={() => setHistoryModalClient(null)}>✕</button>
+                  <button
+                    className="clear-search-btn"
+                    onClick={() => setHistoryModalClient(null)}
+                    style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                  >
+                    ✕
+                  </button>
                 </div>
 
                 {/* Financial Summary */}
@@ -1240,9 +1289,21 @@ export default function ClientManagement({ viewMode }) {
           {/* ================= DELETE CONFIRMATION MODAL ================= */}
           {showDeleteModal && clientToDelete && (
             <div className="mgmt-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '420px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fee2e2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '430px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  background: '#ffffff'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fee2e2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     <Trash2 size={18} color="#dc2626" />
                   </div>
                   <div>
@@ -1250,10 +1311,10 @@ export default function ClientManagement({ viewMode }) {
                     <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>This action cannot be undone.</p>
                   </div>
                 </div>
-                <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5', margin: '10px 0 16px' }}>
+                <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5', margin: '0 0 18px' }}>
                   Are you sure you want to permanently delete <strong>{clientToDelete.name}</strong> ({clientToDelete.id})? All case linkages will be detached.
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                   <button className="btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
                   <button
                     className="btn-primary"

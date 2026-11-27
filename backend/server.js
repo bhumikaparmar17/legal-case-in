@@ -1,5 +1,7 @@
 const express = require('express')
 const cors = require('cors')
+const path = require('path')
+const fs = require('fs')
 require('dotenv').config()
 
 let db
@@ -10,13 +12,32 @@ try {
 }
 
 const app = express()
+app.set('etag', false)
 const PORT = process.env.PORT || 5000
 
-// JSON request parsing
-app.use(express.json())
+// Disable caching on all API routes so live polling never receives stale 304 responses
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.set('Pragma', 'no-cache')
+  res.set('Expires', '0')
+  next()
+})
 
-// CORS restricted to Frontend and TV Display application origins
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
+// JSON request parsing (with 50MB payload limit for file attachments)
+app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ extended: true, limit: '50mb' }))
+
+// Ensure backend data and upload directories exist
+const dataDir = path.join(__dirname, 'data')
+const uploadDir = path.join(__dirname, 'uploads', 'documents')
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
+
+// Serve static uploaded documents
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+
+// CORS configured for all local development ports (5173, 5174, 5175, etc.) and explicit origins
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174')
   .split(',')
   .map((origin) => origin.trim())
 
@@ -24,7 +45,14 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g. curl, mobile apps, Postman)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) return callback(null, true)
+
+      // Allow any localhost / 127.0.0.1 development port automatically
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true)
+      }
+
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true)
       }
       return callback(new Error(`CORS blocked: Origin ${origin} not permitted`))
@@ -110,8 +138,9 @@ if (require.main === module) {
       if (db) {
         const [rows] = await db.query('SELECT 1 AS connected')
         const [dbInfo] = await db.query('SELECT DATABASE() AS currentDb')
-        const currentDb = dbInfo && dbInfo[0] ? dbInfo[0].currentDb : (process.env.DB_NAME || 'legalcase_db')
-        console.log(`MySQL Database '${currentDb}' connected successfully on ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 3306}`)
+        const currentDb = dbInfo && dbInfo[0] ? dbInfo[0].currentDb : (process.env.DB_NAME || 'railway')
+        const connHost = process.env.MYSQL_URL ? 'Live Railway (reseau.proxy.rlwy.net)' : `${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 3306}`
+        console.log(`MySQL Database '${currentDb}' connected successfully via ${connHost}`)
       }
     } catch (err) {
       console.error('MySQL Database connection error:', err.message)

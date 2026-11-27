@@ -9,6 +9,7 @@ import { OFFICE } from '../data/menu.js'
 import {
   getPayments, getExpenses, getConsultancyFees, onStorageUpdate
 } from '../services/storageService.js'
+import { api } from '../services/api.js'
 import './management.css'
 
 export default function IncomeExpenseReport() {
@@ -25,6 +26,11 @@ export default function IncomeExpenseReport() {
   const [dateError, setDateError] = useState('')
 
   useEffect(() => {
+    Promise.all([api.getPayments(), api.getExpenses()]).then(([pData, eData]) => {
+      if (Array.isArray(pData)) setPayments(pData)
+      if (Array.isArray(eData)) setExpenses(eData)
+    }).catch(() => {})
+
     return onStorageUpdate(() => {
       setPayments(getPayments())
       setExpenses(getExpenses())
@@ -47,9 +53,9 @@ export default function IncomeExpenseReport() {
       }
       list.push({
         id: `pay-${p.id}`,
-        date: p.paymentDate || '',
+        date: p.paymentDate || p.date || '',
         clientName: displayName.toUpperCase(),
-        amount: Number(p.amount || 0),
+        amount: Number(p.amount || p.paidAmount || 0),
         source: 'Litigation Payment',
       })
     })
@@ -59,7 +65,7 @@ export default function IncomeExpenseReport() {
       const displayName = c.clientName ? `${c.clientName} (CONSULTANCY)` : 'CONSULTANCY'
       list.push({
         id: `con-${c.id}`,
-        date: c.date || '',
+        date: c.date || c.consultationDate || '',
         clientName: displayName.toUpperCase(),
         amount: Number(c.amount || 0),
         source: 'Chamber Consultancy',
@@ -73,10 +79,10 @@ export default function IncomeExpenseReport() {
   const allExpenseEntries = useMemo(() => {
     return expenses.map((e) => ({
       id: `exp-${e.id}`,
-      date: e.date || '',
-      paidTo: (e.paidTo || e.head || e.category || 'EXPENSE').toUpperCase(),
+      date: e.expenseDate || e.date || '',
+      paidTo: (e.paidTo || e.headName || e.head || e.category || 'EXPENSE').toUpperCase(),
       amount: Number(e.amount || 0),
-      remarks: e.remarks || '',
+      remarks: e.remarks || e.details || '',
     })).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
   }, [expenses])
 

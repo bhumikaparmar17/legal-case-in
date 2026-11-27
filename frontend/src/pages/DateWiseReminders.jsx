@@ -11,6 +11,7 @@ import {
   getReminders, saveReminder, updateReminder, deleteReminder,
   getClients, onStorageUpdate
 } from '../services/storageService.js'
+import { api } from '../services/api.js'
 import './management.css'
 
 export default function DateWiseReminders() {
@@ -19,7 +20,7 @@ export default function DateWiseReminders() {
   const [clients, setClients] = useState(() => getClients())
   const [selectedDate, setSelectedDate] = useState(() => {
     const r = getReminders()
-    return r.length > 0 ? r[0].date : new Date().toISOString().split('T')[0]
+    return r.length > 0 ? (r[0].date || r[0].nextDate || r[0].hearingDate || '') : new Date().toISOString().split('T')[0]
   })
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState(null)
@@ -39,6 +40,15 @@ export default function DateWiseReminders() {
   const [formData, setFormData] = useState(initialForm)
 
   useEffect(() => {
+    // Live API fetch on mount -> register in Network tab & hydrate
+    api.getReminders().then((data) => {
+      if (Array.isArray(data)) setReminders(data)
+    }).catch(() => {})
+
+    api.getClients().then((data) => {
+      if (Array.isArray(data)) setClients(data)
+    }).catch(() => {})
+
     return onStorageUpdate(() => {
       setReminders(getReminders())
       setClients(getClients())
@@ -119,13 +129,15 @@ export default function DateWiseReminders() {
 
   // Filter reminders by selectedDate and search
   const filteredReminders = reminders.filter((r) => {
-    const matchesDate = !selectedDate || r.date === selectedDate
+    const rDate = r.date || r.nextDate || r.hearingDate || ''
+    const matchesDate = !selectedDate || rDate === selectedDate
     const q = search.toLowerCase()
+    const rReasons = r.reasons || r.for || r.stage || ''
     const matchesSearch =
       !search ||
       (r.clientName && r.clientName.toLowerCase().includes(q)) ||
       (r.phone && r.phone.includes(q)) ||
-      (r.reasons && r.reasons.toLowerCase().includes(q)) ||
+      (rReasons && rReasons.toLowerCase().includes(q)) ||
       (r.courtName && r.courtName.toLowerCase().includes(q))
 
     return matchesDate && matchesSearch
@@ -138,7 +150,9 @@ export default function DateWiseReminders() {
       showToast('error', 'Mobile number missing or invalid.')
       return
     }
-    const msg = `CHAMBERS REMINDER (${OFFICE.name}):\nDear ${rem.clientName},\nThis is an advance court & chamber notice regarding:\n${rem.reasons}\nDate: ${rem.date}\nChambers: ${OFFICE.address}`
+    const remReasons = rem.reasons || rem.for || rem.stage || 'Court Appearance'
+    const remDate = rem.date || rem.nextDate || rem.hearingDate || 'Today'
+    const msg = `CHAMBERS REMINDER (${OFFICE.name}):\nDear ${rem.clientName},\nThis is an advance court & chamber notice regarding:\n${remReasons}\nDate: ${remDate}\nChambers: ${OFFICE.address}`
     const phoneWithCountry = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`
     window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`, '_blank')
     showToast('success', `WhatsApp launched for ${rem.clientName}!`)
@@ -301,7 +315,7 @@ export default function DateWiseReminders() {
                       {/* Reasons */}
                       <div>
                         <strong>Reasons :</strong>{' '}
-                        <span style={{ color: '#334155', lineHeight: '1.4' }}>{rem.reasons}</span>
+                        <span style={{ color: '#334155', lineHeight: '1.4' }}>{rem.reasons || rem.for || rem.stage || '—'}</span>
                       </div>
 
                       {/* Actions */}
@@ -376,10 +390,10 @@ export default function DateWiseReminders() {
                       filteredReminders.map((rem, idx) => (
                         <tr key={rem.id}>
                           <td><b>{idx + 1}</b></td>
-                          <td><span className="cell-date">{rem.date}</span></td>
+                          <td><span className="cell-date">{rem.date || rem.nextDate || rem.hearingDate || '—'}</span></td>
                           <td><strong className="primary-text">{rem.clientName}</strong></td>
-                          <td><span className="cell-phone">{rem.phone}</span></td>
-                          <td><span style={{ fontSize: '13px', color: '#334155' }}>{rem.reasons}</span></td>
+                          <td><span className="cell-phone">{rem.phone || '—'}</span></td>
+                          <td><span style={{ fontSize: '13px', color: '#334155' }}>{rem.reasons || rem.for || rem.stage || '—'}</span></td>
                           <td style={{ textAlign: 'center' }}>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
                               <button
@@ -423,15 +437,36 @@ export default function DateWiseReminders() {
           {/* Add / Edit Reminder Modal */}
           {showAddModal && (
             <div className="mgmt-modal-overlay" onClick={() => setShowAddModal(false)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '480px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div className="mgmt-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700' }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '500px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  maxHeight: '88vh',
+                  overflowY: 'auto',
+                  background: '#ffffff'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mgmt-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '14px' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
                     {editingReminder ? 'Edit Reminder' : 'Add New Chamber Reminder'}
                   </h3>
-                  <button className="clear-search-btn" onClick={() => setShowAddModal(false)}>✕</button>
+                  <button
+                    type="button"
+                    className="clear-search-btn"
+                    onClick={() => setShowAddModal(false)}
+                    style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                <form onSubmit={handleSaveReminder} style={{ marginTop: '12px' }}>
+                <form onSubmit={handleSaveReminder}>
                   <div className="form-field" style={{ marginBottom: '10px' }}>
                     <label className="field-lbl">Autofill from Registered Client (Optional)</label>
                     <select
@@ -480,11 +515,12 @@ export default function DateWiseReminders() {
                     </div>
                   </div>
 
-                  <div className="form-field" style={{ marginBottom: '14px' }}>
+                  <div className="form-field" style={{ marginBottom: '16px' }}>
                     <label className="field-lbl">Reasons / Matters for Adv. Anupam Maity <span className="req">*</span></label>
                     <textarea
                       rows={3}
                       className="form-input form-textarea"
+                      style={{ height: 'auto', padding: '8px 10px' }}
                       value={formData.reasons}
                       onChange={(e) => setFormData((p) => ({ ...p, reasons: e.target.value }))}
                       placeholder="e.g. Production of certified deed; witness cross-examination; anticipatory bail reminder..."
@@ -492,7 +528,7 @@ export default function DateWiseReminders() {
                     />
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                     <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
                     <button type="submit" className="btn-primary" style={{ background: '#dc2626', borderColor: '#b91c1c' }}>
                       {editingReminder ? 'Update Reminder' : 'Save Reminder'}
@@ -506,19 +542,32 @@ export default function DateWiseReminders() {
           {/* Delete Modal */}
           {deleteTarget && (
             <div className="mgmt-modal-overlay" onClick={() => setDeleteTarget(null)}>
-              <div className="mgmt-modal-box" style={{ maxWidth: '400px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fee2e2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <div
+                className="mgmt-modal-box"
+                style={{
+                  maxWidth: '430px',
+                  width: '92%',
+                  padding: '22px 24px',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)',
+                  background: '#ffffff'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fee2e2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     <Trash2 size={18} color="#dc2626" />
                   </div>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#991b1b' }}>Delete Reminder?</h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>This action cannot be undone.</p>
                   </div>
                 </div>
-                <p style={{ fontSize: '13px', color: '#334155', margin: '10px 0 16px' }}>
+                <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5', margin: '0 0 18px' }}>
                   Are you sure you want to delete this reminder for <strong>{deleteTarget.clientName}</strong> on <strong>{deleteTarget.date}</strong>?
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
                   <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
                   <button className="btn-primary" style={{ background: '#dc2626', borderColor: '#b91c1c' }} onClick={confirmDelete}>
                     Confirm Delete

@@ -1,13 +1,14 @@
 // =====================================================================
 // Frontend API Client for LegalCase Management System
-// Connects to Node.js / Express Backend on http://localhost:5000/api
+// Connects to Node.js / Express Backend (Local / Live via .env)
 // =====================================================================
 
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 
 async function request(endpoint, options = {}) {
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, {
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
         ...(options.headers || {}),
@@ -63,6 +64,24 @@ export const api = {
   updatePayment: (id, data) => request(`/payments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePayment: (id) => request(`/payments/${id}`, { method: 'DELETE' }),
 
+  // Direct Consultancy Fees (No Case ID - ClientMaster ConFees & Payment)
+  getConsultancyFees: () => request('/consultancy-fees'),
+  createConsultancyFee: (data) => request('/consultancy-fees', { method: 'POST', body: JSON.stringify(data) }),
+  updateConsultancyFee: (id, data) => request(`/consultancy-fees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteConsultancyFee: (id) => request(`/consultancy-fees/${id}`, { method: 'DELETE' }),
+
+  // Extra Brief for Court to Other Advocate (Evidence)
+  getExtraBriefs: () => request('/extra-briefs'),
+  createExtraBrief: (data) => request('/extra-briefs', { method: 'POST', body: JSON.stringify(data) }),
+  updateExtraBrief: (id, data) => request(`/extra-briefs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExtraBrief: (id) => request(`/extra-briefs/${id}`, { method: 'DELETE' }),
+
+  // ID-Wise Document Upload Repository
+  getDocuments: (filterId) => request(`/documents${filterId ? `?filterId=${encodeURIComponent(filterId)}` : ''}`),
+  getDocumentById: (id) => request(`/documents/${id}`),
+  uploadDocument: (data) => request('/documents', { method: 'POST', body: JSON.stringify(data) }),
+  deleteDocument: (id) => request(`/documents/${id}`, { method: 'DELETE' }),
+
   // Expense Heads (ExpenseHeadMaster)
   getExpenseHeads: () => request('/expense-heads'),
   createExpenseHead: (data) => request('/expense-heads', { method: 'POST', body: JSON.stringify(data) }),
@@ -79,6 +98,7 @@ export const api = {
   getWaitingList: () => request('/waiting-list'),
   createWaitingListEntry: (data) => request('/waiting-list', { method: 'POST', body: JSON.stringify(data) }),
   updateWaitingListEntry: (id, data) => request(`/waiting-list/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  recallWaitingListEntry: (id) => request(`/waiting-list/${id}/recall`, { method: 'POST' }),
   deleteWaitingListEntry: (id) => request(`/waiting-list/${id}`, { method: 'DELETE' }),
 
   // Announcements (Announcements)

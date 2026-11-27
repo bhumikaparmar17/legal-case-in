@@ -72,7 +72,7 @@ export default function Login() {
           <li><span><CalendarClock size={16} /></span>Date-wise case lists &amp; reports</li>
         </ul>
 
-        <p className="brand-foot">Powered by <strong>Netprogen.</strong></p>
+        <p className="brand-foot">Advocate Office Automation &amp; Practice Suite</p>
       </section>
 
       {/* ===== Right: form panel ===== */}

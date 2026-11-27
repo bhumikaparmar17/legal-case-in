@@ -4,7 +4,7 @@ import {
   FolderCog, PenSquare, BarChart3, QrCode, Plus, CalendarDays,
   ChevronRight, Scale, Briefcase, Receipt, LayoutDashboard,
   CreditCard, AlertTriangle, UploadCloud, BellRing, Tags, BadgeIndianRupee,
-  Layers, Landmark
+  Layers, Landmark, PanelLeftClose, PanelLeftOpen, Compass, Tv
 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import StatCard from '../components/StatCard.jsx'
@@ -29,6 +29,7 @@ const STAT_LINK = {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [sidebarExpanded, setSidebarExpanded] = useState(true)
   const [overviewStats, setOverviewStats] = useState(() => getPracticeOverviewStats())
 
   // Fetch real-time live database overview on mount and subscribe to updates
@@ -71,50 +72,77 @@ export default function Dashboard() {
       <Topbar />
 
       <div className="dash-body-layout">
-        {/* Sleek quick navigation rail (starts below Topbar, without redundant logo) */}
-        <aside className="rail">
+        {/* Navigation Sidebar with visible menu labels and toggle */}
+        <aside className={`rail ${sidebarExpanded ? 'expanded' : 'collapsed'}`}>
           <div className="rail-top">
+            <div className="rail-header">
+              <span className="rail-header-title">
+                <Compass size={14} />
+                <span>Menu Navigation</span>
+              </span>
+              <button
+                className="rail-toggle-btn"
+                onClick={() => setSidebarExpanded(!sidebarExpanded)}
+                title={sidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
+              >
+                {sidebarExpanded ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+              </button>
+            </div>
+
             <nav className="rail-nav">
               <button className="rail-btn active" onClick={() => navigate('/dashboard')} title="Dashboard">
-                <LayoutDashboard size={17} />
+                <LayoutDashboard size={18} />
+                <span className="rail-label">Dashboard</span>
                 <span className="rail-tip">Dashboard</span>
               </button>
               <button className="rail-btn" onClick={() => go('/cases')} title="Case Management">
-                <Briefcase size={17} />
+                <Briefcase size={18} />
+                <span className="rail-label">Case Master</span>
                 <span className="rail-tip">Cases</span>
               </button>
               <button className="rail-btn" onClick={() => go('/clients')} title="Client Management">
-                <Scale size={17} />
+                <Scale size={18} />
+                <span className="rail-label">Client Master</span>
                 <span className="rail-tip">Clients</span>
               </button>
               <button className="rail-btn" onClick={() => go('/payments')} title="Payment & Accounts">
-                <CreditCard size={17} />
+                <CreditCard size={18} />
+                <span className="rail-label">Payments &amp; Bills</span>
                 <span className="rail-tip">Payments</span>
               </button>
               <button className="rail-btn" onClick={() => go('/due-list')} title="Outstanding Due List">
-                <AlertTriangle size={17} />
+                <AlertTriangle size={18} />
+                <span className="rail-label">Outstanding Dues</span>
                 <span className="rail-tip">Dues</span>
               </button>
               <button className="rail-btn" onClick={() => go('/reminders')} title="Hearing Schedule">
-                <BellRing size={17} />
+                <BellRing size={18} />
+                <span className="rail-label">Hearing Reminders</span>
                 <span className="rail-tip">Hearings</span>
               </button>
+              <button className="rail-btn" onClick={() => go('/expenses')} title="Expense Accounts">
+                <Receipt size={18} />
+                <span className="rail-label">Office Expenses</span>
+                <span className="rail-tip">Expenses</span>
+              </button>
               <button className="rail-btn" onClick={() => go('/case-search')} title="Reports & Query">
-                <BarChart3 size={17} />
+                <BarChart3 size={18} />
+                <span className="rail-label">Case Search &amp; Reports</span>
                 <span className="rail-tip">Search</span>
+              </button>
+              <button className="rail-btn" onClick={() => go('/tv-display')} title="Digital Queue & TV Display">
+                <Tv size={18} />
+                <span className="rail-label">Chamber TV Display</span>
+                <span className="rail-tip">TV Screen</span>
               </button>
             </nav>
           </div>
 
           <div className="rail-bottom">
-            <button
-              className="rail-qr"
-              title="Advocate Chambers Digital Verification QR"
-              onClick={() => alert('Advocate Chambers Digital Verification QR')}
-            >
-              <QrCode size={18} />
-            </button>
-            <span className="rail-brand">Netprogen.</span>
+            <div className="rail-bottom-card">
+              <span className="pulse-dot" />
+              <span>Chamber Active</span>
+            </div>
           </div>
         </aside>
 
@@ -250,7 +278,7 @@ export default function Dashboard() {
               <span className="dash-foot-dot">·</span>
               <span>Secure Case Ledger</span>
               <span className="dash-foot-dot">·</span>
-              <span>Powered by <strong>Netprogen.</strong></span>
+              <span>Practice Suite</span>
             </div>
           </footer>
         </main>
