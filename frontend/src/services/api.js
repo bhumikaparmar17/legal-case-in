@@ -1,9 +1,9 @@
 // =====================================================================
 // Frontend API Client for LegalCase Management System
-// Connects to Node.js / Express Backend on http://localhost:5000/api
+// Connects to Node.js / Express Backend (Local / Live via .env)
 // =====================================================================
 
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 
 async function request(endpoint, options = {}) {
   try {

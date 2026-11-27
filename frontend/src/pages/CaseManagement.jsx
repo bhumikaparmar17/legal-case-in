@@ -627,10 +627,12 @@ export default function CaseManagement() {
                 )}
               </div>
 
-              <form className="mgmt-form" onSubmit={(e) => e.preventDefault()} style={{ gap: '10px', padding: '14px' }}>
+              <form className="mgmt-form" onSubmit={(e) => e.preventDefault()} style={{ gap: '12px', padding: '16px' }}>
                 <div className="form-row-2">
                   <div className="form-field">
-                    <label className="field-lbl">Case Number (CaseNo) <span className="req">*</span></label>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Case Number <span className="req" style={{ color: '#ef4444' }}>*</span>
+                    </label>
                     <div className="input-with-icon">
                       <Hash size={13} className="input-ic" />
                       <input
@@ -646,7 +648,9 @@ export default function CaseManagement() {
                   </div>
 
                   <div className="form-field">
-                    <label className="field-lbl">Court Name (CourtName) <span className="req">*</span></label>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Court Name <span className="req" style={{ color: '#ef4444' }}>*</span>
+                    </label>
                     <div className="input-with-icon">
                       <Building2 size={13} className="input-ic" />
                       <input
@@ -664,12 +668,12 @@ export default function CaseManagement() {
 
                 <div className="form-row-2">
                   <div className="form-field" style={{ position: 'relative' }}>
-                    <label className="field-lbl">
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
                       Registered Client
                       {formData.clientId && <span style={{ marginLeft: '4px', color: '#1d4ed8', fontWeight: '700' }}>({formData.clientId})</span>}
                     </label>
-                    <div style={{ position: 'relative' }}>
-                      <User size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <div className="input-with-icon" style={{ position: 'relative' }}>
+                      <User size={13} className="input-ic" />
                       <input
                         type="text"
                         placeholder="Search Client ID or Name..."
@@ -680,7 +684,7 @@ export default function CaseManagement() {
                         }}
                         onFocus={() => setShowClientDropdown(true)}
                         className="form-input"
-                        style={{ paddingLeft: '28px', paddingRight: '24px' }}
+                        style={{ paddingRight: (clientSearchQuery || formData.clientId) ? '24px' : '9px' }}
                       />
                       {(clientSearchQuery || formData.clientId) && (
                         <button
@@ -726,39 +730,51 @@ export default function CaseManagement() {
                   </div>
 
                   <div className="form-field">
-                    <label className="field-lbl">Versus / Opposite Party (VersusName)</label>
-                    <input
-                      type="text"
-                      name="vsName"
-                      placeholder="e.g. State of West Bengal / Bimal Roy"
-                      className="form-input"
-                      value={formData.vsName}
-                      onChange={handleChange}
-                    />
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Opposite Party (Versus)
+                    </label>
+                    <div className="input-with-icon">
+                      <User size={13} className="input-ic" />
+                      <input
+                        type="text"
+                        name="vsName"
+                        placeholder="e.g. State of West Bengal / Bimal Roy"
+                        className="form-input"
+                        value={formData.vsName}
+                        onChange={handleChange}
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-field">
-                    <label className="field-lbl">Under Section (Us)</label>
-                    <input
-                      type="text"
-                      name="underSection"
-                      placeholder="e.g. 302/34 IPC or 138 NI Act"
-                      className="form-input"
-                      value={formData.underSection}
-                      onChange={handleChange}
-                    />
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Under Section (U/S)
+                    </label>
+                    <div className="input-with-icon">
+                      <Scale size={13} className="input-ic" />
+                      <input
+                        type="text"
+                        name="underSection"
+                        placeholder="e.g. 302/34 IPC or 138 NI Act"
+                        className="form-input"
+                        value={formData.underSection}
+                        onChange={handleChange}
+                      />
+                    </div>
                   </div>
 
                   <div className="form-field">
-                    <label className="field-lbl">Hearing Stage / Purpose (For) <span className="req">*</span></label>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Hearing Stage / Purpose <span className="req" style={{ color: '#ef4444' }}>*</span>
+                    </label>
                     <div className="input-with-icon">
                       <Gavel size={13} className="input-ic" />
                       <input
                         type="text"
                         name="purpose"
-                        placeholder="e.g. Bail, Scrutiny, Evidence, Argument"
+                        placeholder="e.g. Bail, Scrutiny, Argument"
                         className="form-input"
                         value={formData.purpose}
                         onChange={handleChange}
@@ -769,22 +785,23 @@ export default function CaseManagement() {
 
                 <div className="form-row-2">
                   <div className="form-field">
-                    <label className="field-lbl">Next Hearing Date (NextDate) <span className="req">*</span></label>
-                    <div className="input-with-icon">
-                      <Calendar size={13} className="input-ic" />
-                      <input
-                        type="date"
-                        name="nextDate"
-                        className={`form-input ${errors.nextDate ? 'input-err' : ''}`}
-                        value={formData.nextDate}
-                        onChange={handleChange}
-                      />
-                    </div>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Next Hearing Date <span className="req" style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="date"
+                      name="nextDate"
+                      className={`form-input ${errors.nextDate ? 'input-err' : ''}`}
+                      value={formData.nextDate}
+                      onChange={handleChange}
+                    />
                     {errors.nextDate && <span className="err-msg">{errors.nextDate}</span>}
                   </div>
 
                   <div className="form-field">
-                    <label className="field-lbl">Case Filing Date (StartDate)</label>
+                    <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                      Case Filing Date
+                    </label>
                     <input
                       type="date"
                       name="startDate"
@@ -796,28 +813,42 @@ export default function CaseManagement() {
                 </div>
 
                 <div className="form-field">
-                  <label className="field-lbl">Police Station &amp; PS Case No (PsCaseNo)</label>
-                  <input
-                    type="text"
-                    name="psCaseNumber"
-                    placeholder="e.g. CONTAI PS - 42/14"
-                    className="form-input"
-                    value={formData.psCaseNumber}
-                    onChange={handleChange}
-                  />
+                  <label className="field-lbl" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', minHeight: '18px', whiteSpace: 'nowrap' }}>
+                    Police Station &amp; PS Case No.
+                  </label>
+                  <div className="input-with-icon">
+                    <MapPin size={13} className="input-ic" />
+                    <input
+                      type="text"
+                      name="psCaseNumber"
+                      placeholder="e.g. CONTAI PS - 42/14"
+                      className="form-input"
+                      value={formData.psCaseNumber}
+                      onChange={handleChange}
+                    />
+                  </div>
                 </div>
 
                 {/* Action Buttons Row */}
-                <div className="mgmt-btn-bar" style={{ marginTop: '6px' }}>
+                <div
+                  className="mgmt-btn-bar"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: selectedCaseId ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)',
+                    gap: selectedCaseId ? '4px' : '6px',
+                    marginTop: '4px'
+                  }}
+                >
                   <button
                     type="button"
                     className="act-btn btn-save"
                     onClick={handleSave}
                     disabled={loading || !!selectedCaseId}
                     title={selectedCaseId ? 'Clear selection to create a new case' : 'Save case'}
+                    style={{ height: '34px', padding: '0 2px', fontSize: selectedCaseId ? '10.5px' : '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
                   >
-                    <Save size={14} />
-                    <span>SAVE CASE</span>
+                    <Save size={12} />
+                    <span>{selectedCaseId ? 'SAVE' : 'SAVE CASE'}</span>
                   </button>
 
                   <button
@@ -826,21 +857,33 @@ export default function CaseManagement() {
                     onClick={handleUpdate}
                     disabled={loading || !selectedCaseId}
                     title={!selectedCaseId ? 'Select a case from the table to update' : 'Save modifications'}
+                    style={{ height: '34px', padding: '0 2px', fontSize: selectedCaseId ? '10.5px' : '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
                   >
-                    <RefreshCw size={14} />
-                    <span>UPDATE CASE</span>
+                    <RefreshCw size={12} />
+                    <span>UPDATE</span>
                   </button>
 
                   {selectedCaseId && (
                     <button
                       type="button"
                       className="act-btn"
-                      style={{ background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5' }}
+                      style={{
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        borderColor: '#fca5a5',
+                        height: '34px',
+                        padding: '0 2px',
+                        fontSize: '10.5px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '3px'
+                      }}
                       onClick={() => promptDeleteCase(selectedCase)}
                       disabled={loading}
                       title="Delete case"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={12} />
                       <span>DELETE</span>
                     </button>
                   )}
@@ -851,8 +894,9 @@ export default function CaseManagement() {
                     onClick={handlePrint}
                     disabled={!selectedCaseId}
                     title="Print case docket"
+                    style={{ height: '34px', padding: '0 2px', fontSize: selectedCaseId ? '10.5px' : '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
                   >
-                    <Printer size={14} />
+                    <Printer size={12} />
                     <span>PRINT</span>
                   </button>
 
@@ -861,8 +905,9 @@ export default function CaseManagement() {
                     className="act-btn btn-clear"
                     onClick={handleClear}
                     title="Clear fields"
+                    style={{ height: '34px', padding: '0 2px', fontSize: selectedCaseId ? '10.5px' : '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
                   >
-                    <XCircle size={14} />
+                    <XCircle size={12} />
                     <span>CLEAR</span>
                   </button>
                 </div>

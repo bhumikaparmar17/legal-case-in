@@ -756,7 +756,8 @@ export function updateBill(id, billData) {
   const totalAmount = Math.max(0, contractAmount + additionalCharges - discount)
 
   const payments = getPayments().filter((p) => p.billId === bills[idx].id || p.billId === bills[idx].billNumber || (p.caseId && p.caseId === bills[idx].caseId))
-  const paidAmount = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+  const computedPaid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+  const paidAmount = billData.paidAmount !== undefined ? Number(billData.paidAmount) : computedPaid
   const dueAmount = Math.max(0, totalAmount - paidAmount)
 
   bills[idx] = {
@@ -768,12 +769,20 @@ export function updateBill(id, billData) {
     additionalCharges,
     discount,
     totalAmount,
+    totalBillAmount: totalAmount,
     paidAmount,
     dueAmount,
     updatedAt: new Date().toISOString(),
   }
 
   writeStorage(BILLS_KEY, bills)
+  api.updateBill(bills[idx].id, {
+    ...bills[idx],
+    amount: totalAmount,
+    totalAmount,
+    totalBillAmount: totalAmount,
+    details: billData.description || billData.details || billData.remarks || '',
+  }).catch((e) => console.warn('MySQL updateBill sync:', e.message))
   return bills[idx]
 }
 
